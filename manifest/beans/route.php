@@ -32,6 +32,7 @@ return [
                     'rules'      => [
                         // 分组路由
                         'POST /user/create' => [[\App\Api\Controllers\UserController::class, 'create'], 'middleware' => [\App\Api\Middleware\ActionMiddleware::class]],
+                        'GET /stock/ztwatch' => [[\App\Api\Controllers\StockController::class, 'create'], 'middleware' => [\App\Api\Middleware\ActionMiddleware::class]],
                     ],
                 ],
             ],
