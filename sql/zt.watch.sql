@@ -51,4 +51,3 @@ select * from hsab where code in (
 		and `price`=`zt` and `zf`<=0.89 and left(`name`, 1) not in ('N','*','S') and left(`code`, 3) not in (300,688)
 ) and `date` >= (SELECT MIN(`date`) FROM (SELECT `date` FROM `hsab` WHERE `date` <> CURDATE() GROUP BY `date` ORDER BY `date` DESC LIMIT 18) AS `t`);
 
-select * from hsab where date=curdate() and zf >= 8.99 and up < 20 and left(code, 3) not in (300) and price = zg order by up desc
