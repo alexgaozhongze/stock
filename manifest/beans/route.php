@@ -31,8 +31,8 @@ return [
                     // 分组路由规则
                     'rules'      => [
                         // 分组路由
-                        'POST /user/create' => [[\App\Api\Controllers\UserController::class, 'create'], 'middleware' => [\App\Api\Middleware\ActionMiddleware::class]],
-                        'GET /stock/ztwatch' => [[\App\Api\Controllers\StockController::class, 'create'], 'middleware' => [\App\Api\Middleware\ActionMiddleware::class]],
+                        'POST /user/login' => [[\App\Api\Controllers\UserController::class, 'login'], 'middleware' => [\App\Api\Middleware\ActionMiddleware::class]],
+                        'GET /stock/ztwatch' => [[\App\Api\Controllers\StockController::class, 'ztwatch'], 'middleware' => [\App\Api\Middleware\ActionMiddleware::class]],
                     ],
                 ],
             ],
@@ -61,6 +61,7 @@ return [
             'rules'          => [
                 // 普通路由
                 '/'             => [[\App\Web\Controllers\IndexController::class, 'index'], 'middleware' => [\App\Web\Middleware\ActionMiddleware::class]],
+                '/login'        => [[\App\Web\Controllers\IndexController::class, 'login'], 'middleware' => [\App\Web\Middleware\ActionMiddleware::class]],
                 '/profile/{id}' => [[\App\Web\Controllers\ProfileController::class, 'index'], 'middleware' => [\App\Web\Middleware\ActionMiddleware::class]],
                 '/ws'           => [[\App\Web\Controllers\WebSocketController::class, 'index'], 'middleware' => [\App\Web\Middleware\ActionMiddleware::class]],
             ],

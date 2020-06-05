@@ -35,4 +35,9 @@ class IndexController
         return ResponseHelper::html($response, $content);
     }
 
+    public function login(ServerRequest $request, Response $response)
+    {
+        return ResponseHelper::view($response, 'login.index');
+    }
+
 }

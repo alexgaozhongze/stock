@@ -31,6 +31,20 @@ class StockController
      */
     public function ztwatch(ServerRequest $request, Response $response)
     {
+        $session  = context()->getBean('session', [
+            'request'  => $request,
+            'response' => $response,
+        ]);
+        // $session->createId();
+        // $payload = [
+        //     'uid'      => 1088,
+        //     'openid'   => 'yZmFiZDc5MjIzZDMz',
+        //     'username' => '小明',
+        // ];
+        // $session->set('payload', $payload);
+
+        var_dump($session->get('payload'));
+
         // 响应
         $content = ['code' => 0, 'message' => 'OK'];
         return ResponseHelper::json($response, $content);

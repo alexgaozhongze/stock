@@ -23,7 +23,7 @@ return [
             // 有效的服务器路径
             'cookiePath'     => '/',
             // 有效域名/子域名
-            'cookieDomain'   => '',
+            'cookieDomain'   => '.ningle.info',
             // 仅通过安全的 HTTPS 连接传给客户端
             'cookieSecure'   => false,
             // 仅可通过 HTTP 协议访问

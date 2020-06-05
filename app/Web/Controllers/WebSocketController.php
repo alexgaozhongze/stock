@@ -31,6 +31,20 @@ class WebSocketController
      */
     public function index(ServerRequest $request, Response $response)
     {
+        $session  = context()->getBean('session', [
+            'request'  => $request,
+            'response' => $response,
+        ]);
+        $session->createId();
+        $payload = [
+            'uid'      => 1088,
+            'openid'   => 'yZmFiZDc5MjIzZDMz',
+            'username' => '小明',
+        ];
+        $session->set('payload', $payload);
+
+        var_dump($session->get('payload'));
+
         $data = [
             'id'      => 1,
             'name'    => '小明',

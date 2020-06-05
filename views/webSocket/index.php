@@ -25,4 +25,16 @@ $this->title = 'Profile';
 		};
 	};
 	webSocket();
+
+	$.ajax({  
+        url: "http://api.ztwatch.ningle.info",  
+        type: 'GET',  
+        success: function(data) {  
+            console.log(data)  
+        },  
+        error: function(err) {  
+            console.error(err)  
+        }  
+    })  
+	
 </script>
