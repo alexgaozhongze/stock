@@ -39,3 +39,27 @@ function dates($limit=10, $format='')
     }
     return $list;
 }
+
+function shellPrint($datas)
+{
+    if (!$datas) {
+        echo 'false', PHP_EOL, PHP_EOL;
+        return false;
+    }
+
+    $data = reset($datas);
+    $keys = array_keys($data);
+    foreach ($keys as $value) {
+        printf("% -10s", $value);
+    }
+    echo PHP_EOL;
+
+    foreach ($datas as $value) {
+        foreach ($value as $vvalue) {
+            printf("% -10s", $vvalue);
+        }
+        echo PHP_EOL;
+    }
+
+    echo PHP_EOL;
+}

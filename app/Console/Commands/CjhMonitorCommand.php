@@ -50,7 +50,7 @@ class CjhMonitorCommand
         $pres = array_column($list, 'pre');
         array_multisort($pres, SORT_DESC, $list);
 
-        var_export($list);
+        shellPrint($list);
     }
 
     /**
@@ -85,15 +85,14 @@ class CjhMonitorCommand
             }
 
             $num_forecast = ceil($result['cjs'] * 14400 / $time_diff);
-            
             if ($num_forecast >= $max['cjs']) {
                 $chan->push([
-                    'code'              => $params['code'],
-                    'cjs'               => $result['cjs'],
-                    'cjs_forecast'      => $num_forecast,
-                    'cjs_history_max'   => $max['cjs'],
-                    'up'                => $result['up'],
-                    'pre'               => bcdiv($num_forecast, $max['cjs'], 2)
+                    'code'  => $params['code'],
+                    'cjs'   => $result['cjs'],
+                    'cjsf'  => $num_forecast,
+                    'cjshm' => $max['cjs'],
+                    'up'    => $result['up'],
+                    'pre'   => bcdiv($num_forecast, $max['cjs'], 2)
                 ]);
             } else {
                 $chan->push([]);
