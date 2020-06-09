@@ -34,6 +34,14 @@ return [
         ],
     ],
 
+    'cm' => [
+        \App\Console\Commands\CjhMonitorCommand::class,
+        'description' => "\tcjh monitor",
+        'options'     => [
+            [['d', 'daemon'], 'description' => 'Run in the background'],
+        ],
+    ],
+
     'he' => [
         \App\Console\Commands\HelloCommand::class,
         'description' => "\tEcho demo",
