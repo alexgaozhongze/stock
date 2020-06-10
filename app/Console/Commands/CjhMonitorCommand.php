@@ -37,7 +37,7 @@ class CjhMonitorCommand
         $db         = $dbPool->getConnection();
         $sql        = "SELECT `code`,`type` FROM `hsab` WHERE `date`=CURDATE() AND `price` IS NOT NULL AND LEFT(`name`,1) NOT IN ('N','*','S') AND LEFT(`code`,3) NOT IN (300,688) AND `code` NOT IN (
                             SELECT `code` FROM `hsab` WHERE `price`=`zt` AND `date`>='$dates[0]' AND `date`<>'$dates[18]' GROUP BY `code`)
-                            AND ROUND(`price`, 1)=ROUND(`zg`, 1)";
+                            AND IF (`price`>=99.88, ROUND(`price`, 0)=ROUND(`zg`, 0), ROUND(`price`, 1)=ROUND(`zg`, 1))";
         $codes_info = $db->prepare($sql)->queryAll();
         $db->release();
 
