@@ -89,7 +89,6 @@ class CjhMonitorCommand
                 } else {
                     $time_diff = time() - strtotime('09:30:00');
                 }
-                $time_diff = $time_diff * 0.89;
             } else {
                 if (strtotime('15:00:00') <= time()) {
                     $time_diff = 14400;
@@ -105,7 +104,7 @@ class CjhMonitorCommand
                     'code'  => $params['code'],
                     'cjs'   => $result['cjs'],
                     'cjsf'  => $num_forecast,
-                    'cjshm' => $max['cjs'],
+                    'cjsm' => $max['cjs'],
                     'up'    => $result['up'],
                     'zf'    => $result['zf'],
                     'pre'   => $pre
