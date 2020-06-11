@@ -100,14 +100,19 @@ class CjhMonitorCommand
             $num_forecast = ceil($result['cjs'] * 14400 / $time_diff);
             if ($num_forecast >= $max['cjs']) {
                 $pre = bcdiv($num_forecast, $max['cjs'], 2);
+
+                $sql = "SELECT COUNT(*) AS `count` FROM `cm` WHERE `code`=$params[code] AND `time`>=CURDATE()";
+                $cm_exists = $db->prepare($sql)->queryOne();
+
                 $chan->push([
                     'code'  => $params['code'],
                     'cjs'   => $result['cjs'],
                     'cjsf'  => $num_forecast,
-                    'cjsm' => $max['cjs'],
+                    'cjsm'  => $max['cjs'],
                     'up'    => $result['up'],
                     'zf'    => $result['zf'],
-                    'pre'   => $pre
+                    'pre'   => $pre,
+                    'count' => $cm_exists['count']
                 ]);
 
                 $time = date('Y-m-d H:i:s');
