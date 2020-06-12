@@ -30,14 +30,13 @@ class CjhMonitorCommand
 
     public function main()
     {
-        $dates = dates(18);
+        $days = 59;
+        $dates = dates($days);
         $dates[] = date('Y-m-d');
 
         $dbPool     = context()->get('dbPool');
         $db         = $dbPool->getConnection();
-        $sql        = "SELECT `code`,`type` FROM `hsab` WHERE `date`='$dates[18]' AND `price` IS NOT NULL AND LEFT(`name`,1) NOT IN ('N','*','S') AND LEFT(`code`,3) NOT IN (300,688) AND `code` NOT IN (
-                            SELECT `code` FROM `hsab` WHERE `price`=`zt` AND `date`>='$dates[0]' AND `date`<='$dates[17]' GROUP BY `code`)
-                            AND IF (`price`>=58.99, CEIL(`price`)>=FlOOR(`zg`), ROUND(`price`, 1)=ROUND(`zg`, 1))";
+        $sql        = "SELECT `code`,`type` FROM `hsab` WHERE `date`='$dates[$days]' AND `price` IS NOT NULL AND LEFT(`name`,1) NOT IN ('N','*','S') AND LEFT(`code`,3) NOT IN (300,688)";
         $codes_info = $db->prepare($sql)->queryAll();
         $db->release();
 
@@ -47,9 +46,9 @@ class CjhMonitorCommand
                 'code'          => $value['code'],
                 'type'          => $value['type'],
                 'start_date'    => $dates[0],
-                'middle_date'   => $dates[9],
-                'end_date'      => $dates[17],
-                'cur_date'      => $dates[18]
+                'end_date'      => $dates[$days - 1],
+                'cur_date'      => $dates[$days],
+                'days'          => $days
             ];
             xgo([$this, 'handle'], $chan, $params);
         }
@@ -60,8 +59,8 @@ class CjhMonitorCommand
             $result && $list[] = $result;
         }
 
-        $codes = array_column($list, 'code');
-        array_multisort($codes, SORT_ASC, $list);
+        $sort = array_column($list, 'up');
+        array_multisort($sort, SORT_ASC, $list);
 
         shellPrint($list);
     }
@@ -74,56 +73,15 @@ class CjhMonitorCommand
     {
         $dbPool = context()->get('dbPool');
         $db     = $dbPool->getConnection();
-        $result = $db->prepare("SELECT `cjs`,`date` FROM `hsab` WHERE `code`=$params[code] AND `type`=$params[type] AND `date`>='$params[start_date]' AND `date`<='$params[end_date]'")->queryAll();
+        $result = $db->prepare("SELECT `cjs`,`date` FROM `hsab` WHERE `code`=$params[code] AND `type`=$params[type] AND `date`>='$params[start_date]' AND `date`<='$params[end_date]' AND `price` IS NOT NULL")->queryAll();
         if (!$result) $chan->push([]);
 
         $min = min($result);
         $max = max($result);
         
-        if (strtotime($params['middle_date']) <= strtotime($min['date'])) {
-            $result = $db->prepare("SELECT `cjs`,`up`,`zf` FROM `hsab` WHERE `code`=$params[code] AND `type`=$params[type] AND `date`='$params[cur_date]'")->queryOne();
-
-            if (strtotime('13:00:00') >= time()) {
-                if (strtotime('11:30:00') <= time()) {
-                    $time_diff = 7200;
-                } else {
-                    $time_diff = time() - strtotime('09:30:00');
-                    60 > $time_diff && $time_diff = 60;
-                }
-            } else {
-                if (strtotime('15:00:00') <= time()) {
-                    $time_diff = 14400;
-                } else {
-                    $time_diff = time() - strtotime('13:00:00') + 7200;
-                }
-            }
-
-            $num_forecast = ceil($result['cjs'] * 14400 / $time_diff);
-            $pre = $max['cjs'] ? bcdiv($num_forecast, $max['cjs'], 2) : 0;
-            $pre >= 99.99 && $pre = 99.99;
-
-            if (1.89 <= $pre) {
-                $sql = "SELECT COUNT(*) AS `count` FROM `cm` WHERE `code`=$params[code] AND `time`>=CURDATE()";
-                $cm_exists = $db->prepare($sql)->queryOne();
-
-                $chan->push([
-                    'code'  => $params['code'],
-                    'cjs'   => $result['cjs'],
-                    'cjsf'  => $num_forecast,
-                    'cjsm'  => $max['cjs'],
-                    'up'    => $result['up'],
-                    'zf'    => $result['zf'],
-                    'pre'   => $pre,
-                    'count' => $cm_exists['count']
-                ]);
-
-                $time = date('Y-m-d H:i:s');
-                $sql = "INSERT INTO `cm` (`code`, `up`, `zf`, `pre`, `time`) VALUES ($params[code], $result[up], $result[zf], $pre, '$time')";
-                $db->prepare($sql)->execute();
-
-            } else {
-                $chan->push([]);
-            }
+        if ($params['days'] == count($result) && $params['end_date'] == $min['date']) {
+            $result = $db->prepare("SELECT `code`,`up` FROM `hsab` WHERE `code`=$params[code] AND `type`=$params[type] AND `date`='$params[cur_date]'")->queryOne();
+            $chan->push($result);
         } else {
             $chan->push([]);
         }
