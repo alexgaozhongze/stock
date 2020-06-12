@@ -58,7 +58,7 @@ class FscjCommand
 
         $urls = [];
         array_walk($code_times, function($item) use (&$urls, $timestamp) {
-            $page_size = rand(8, 888);
+            $page_size = 198;
             $page = ceil(($item['count'] + 1) / $page_size);
             $page_index = $page - 1;
 

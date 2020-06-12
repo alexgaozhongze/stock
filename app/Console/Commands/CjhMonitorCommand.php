@@ -17,18 +17,18 @@ class CjhMonitorCommand
     /**
      * 主函数
      */
-    public function main()
-    {
-        // 持续定时
-        $timer = new Timer();
-        $timer->tick(19988, function () {
-            if ((time() >= strtotime('09:15:00') && time() <= strtotime('11:30:00')) || (time() >= strtotime('13:00:00') && time() <= strtotime('15:00:00'))) {
-                $this->timermain();
-            }
-        });
-    }
+    // public function main()
+    // {
+    //     // 持续定时
+    //     $timer = new Timer();
+    //     $timer->tick(9988, function () {
+    //         if ((time() >= strtotime('09:15:00') && time() <= strtotime('11:30:00')) || (time() >= strtotime('13:00:00') && time() <= strtotime('15:00:00'))) {
+    //             $this->timermain();
+    //         }
+    //     });
+    // }
 
-    public function timermain()
+    public function main()
     {
         $dates = dates(18);
         $dates[] = date('Y-m-d');
@@ -60,8 +60,8 @@ class CjhMonitorCommand
             $result && $list[] = $result;
         }
 
-        $pres = array_column($list, 'pre');
-        array_multisort($pres, SORT_DESC, $list);
+        $codes = array_column($list, 'code');
+        array_multisort($codes, SORT_ASC, $list);
 
         shellPrint($list);
     }
@@ -88,6 +88,7 @@ class CjhMonitorCommand
                     $time_diff = 7200;
                 } else {
                     $time_diff = time() - strtotime('09:30:00');
+                    60 > $time_diff && $time_diff = 60;
                 }
             } else {
                 if (strtotime('15:00:00') <= time()) {
@@ -98,9 +99,10 @@ class CjhMonitorCommand
             }
 
             $num_forecast = ceil($result['cjs'] * 14400 / $time_diff);
-            if ($num_forecast >= $max['cjs']) {
-                $pre = bcdiv($num_forecast, $max['cjs'], 2);
+            $pre = $max['cjs'] ? bcdiv($num_forecast, $max['cjs'], 2) : 0;
+            $pre >= 99.99 && $pre = 99.99;
 
+            if (1.89 <= $pre) {
                 $sql = "SELECT COUNT(*) AS `count` FROM `cm` WHERE `code`=$params[code] AND `time`>=CURDATE()";
                 $cm_exists = $db->prepare($sql)->queryOne();
 
