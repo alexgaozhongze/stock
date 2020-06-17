@@ -3,8 +3,6 @@
 namespace App\Console\Commands;
 
 use Swoole\Coroutine\Channel;
-use Mix\Database\Pool\ConnectionPool;
-use Mix\Concurrent\Timer;
 
 /**
  * Class CjhMonitorCommand
@@ -17,17 +15,6 @@ class CjhMonitorCommand
     /**
      * 主函数
      */
-    // public function main()
-    // {
-    //     // 持续定时
-    //     $timer = new Timer();
-    //     $timer->tick(9988, function () {
-    //         if ((time() >= strtotime('09:15:00') && time() <= strtotime('11:30:00')) || (time() >= strtotime('13:00:00') && time() <= strtotime('15:00:00'))) {
-    //             $this->timermain();
-    //         }
-    //     });
-    // }
-
     public function main()
     {
         $days = 59;
