@@ -128,6 +128,8 @@ class HsabCommand
                         $dt = round($value['f18'] * (1 - $rate), 2);
                     }
 
+                    $value['f10'] >= 9999.99 && $value['f10'] = 9999.99;
+
                     $sql_values .= "($value[f12], $value[f2], $value[f3], $value[f4], $zt, $dt, $value[f5], $value[f6], $value[f7], $value[f15], $value[f16], $value[f17], $value[f18], $value[f10], $value[f8], $value[f9], $value[f23], '$date', '$value[f14]', $type)";
                 }
         
