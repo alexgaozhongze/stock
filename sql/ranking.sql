@@ -9,5 +9,5 @@ SELECT `b`.* FROM (
 SELECT `b`.* FROM (
 	SELECT * FROM (
 		SELECT `code`,`type`,SUM(`zf`) AS `szf` FROM `hsab` WHERE `date` >= (SELECT MIN(`date`) FROM (SELECT `date` FROM `hsab` WHERE `date` <> CURDATE() GROUP BY `date` ORDER BY `date` DESC LIMIT 18) AS `t`) AND `date` <> CURDATE() GROUP BY `code` ORDER BY `szf` DESC
-	) AS `a` WHERE `szf` >= 168.99 AND LEFT(`code`, 3) NOT IN (300)
+	) AS `a` WHERE LEFT(`code`, 3) NOT IN (300)
 ) AS `a` LEFT JOIN `hsab` AS `b` ON `a`.`code`=`b`.`code` AND `b`.`date` >= (SELECT MIN(`date`) FROM (SELECT `date` FROM `hsab` WHERE `date` <> CURDATE() GROUP BY `date` ORDER BY `date` DESC LIMIT 18) AS `t`)
