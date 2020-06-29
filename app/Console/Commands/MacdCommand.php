@@ -4,7 +4,6 @@ namespace App\Console\Commands;
 
 use QL\QueryList;
 use GuzzleHttp\Psr7\Response;
-use App\Common\Models\CommonModel;
 
 /**
  * Class MacdCommand
