@@ -80,7 +80,7 @@ class HsabCommand
         });
     }
 
-    public function handle($pages)
+    public static function handle($pages)
     {
         list($microstamp, $timestamp) = explode(' ', microtime());
         $timestamp = "$timestamp" . intval($microstamp * 1000);
@@ -137,6 +137,7 @@ class HsabCommand
         
                 $sql = $sql_fields . $sql_values . $sql_duplicate;
                 $connection->prepare($sql)->execute();
+                echo $sql,PHP_EOL;
         
             })->error(function (QueryList $ql, $reason, $index){
                 // ...

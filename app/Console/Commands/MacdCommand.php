@@ -27,7 +27,7 @@ class MacdCommand
         });
     }
 
-    public function handle()
+    public static function handle()
     {
         $connection = context()->get('dbPool')->getConnection();
 
