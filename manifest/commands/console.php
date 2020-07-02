@@ -34,11 +34,20 @@ return [
         ],
     ],
 
+    'g' => [
+        \App\Console\Commands\GoBeyondCommand::class,
+        'description' => "\tgo beyond",
+        'options'     => [
+            [['d', 'daemon'], 'description' => 'Run in the background'],
+            [['v', 'version'], 'description' => 'method'],
+        ],
+    ],
+
     'cm' => [
         \App\Console\Commands\CjhMonitorCommand::class,
         'description' => "\tcjh monitor",
         'options'     => [
-            [['d', 'daemon'], 'description' => 'Run in the background'],
+            [['v', 'version'], 'description' => 'method'],
         ],
     ],
 
