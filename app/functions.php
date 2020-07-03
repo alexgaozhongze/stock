@@ -61,5 +61,11 @@ function shellPrint($datas)
         echo PHP_EOL;
     }
 
+    $data = reset($datas);
+    $keys = array_keys($data);
+    foreach ($keys as $value) {
+        printf("% -10s", $value);
+    }
+
     echo PHP_EOL;
 }
