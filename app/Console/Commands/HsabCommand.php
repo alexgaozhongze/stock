@@ -133,7 +133,7 @@ class HsabCommand
                     $sql_values .= "($value[f12], $value[f2], $value[f3], $value[f4], $zt, $dt, $value[f5], $value[f6], $value[f7], $value[f15], $value[f16], $value[f17], $value[f18], $value[f10], $value[f8], $value[f9], $value[f23], '$date', '$value[f14]', $type)";
                 }
         
-                $sql_duplicate = " ON DUPLICATE KEY UPDATE `price`=VALUES(`price`), `up`=VALUES(`up`), `upp`=VALUES(`upp`), `cjs`=VALUES(`cjs`), `cje`=VALUES(`cje`), `zf`=VALUES(`zf`), `zg`=VALUES(`zg`), `zd`=VALUES(`zd`), `jk`=VALUES(`jk`), `lb`=VALUES(`lb`), `hsl`=VALUES(`hsl`), `syl`=VALUES(`syl`), `sjl`=VALUES(`sjl`);";
+                $sql_duplicate = " ON DUPLICATE KEY UPDATE `price`=VALUES(`price`), `up`=VALUES(`up`), `upp`=VALUES(`upp`), `zt`=VALUES(`zt`), `dt`=VALUES(`dt`), `cjs`=VALUES(`cjs`), `cje`=VALUES(`cje`), `zf`=VALUES(`zf`), `zg`=VALUES(`zg`), `zd`=VALUES(`zd`), `jk`=VALUES(`jk`), `lb`=VALUES(`lb`), `hsl`=VALUES(`hsl`), `syl`=VALUES(`syl`), `sjl`=VALUES(`sjl`), `name`=VALUES(`name`);";
         
                 $sql = $sql_fields . $sql_values . $sql_duplicate;
                 $connection->prepare($sql)->execute();

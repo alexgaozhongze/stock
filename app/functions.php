@@ -50,13 +50,13 @@ function shellPrint($datas)
     $data = reset($datas);
     $keys = array_keys($data);
     foreach ($keys as $value) {
-        printf("% -10s", $value);
+        printf("% -9s", $value);
     }
     echo PHP_EOL;
 
     foreach ($datas as $value) {
         foreach ($value as $vvalue) {
-            printf("% -10s", $vvalue);
+            printf("% -9s", $vvalue);
         }
         echo PHP_EOL;
     }
@@ -64,7 +64,7 @@ function shellPrint($datas)
     $data = reset($datas);
     $keys = array_keys($data);
     foreach ($keys as $value) {
-        printf("% -10s", $value);
+        printf("% -9s", $value);
     }
 
     echo PHP_EOL;
