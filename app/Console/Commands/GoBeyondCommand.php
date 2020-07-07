@@ -22,8 +22,14 @@ class GoBeyondCommand
         call_user_func([$this, $method]);
     }
 
+    public function zero()
+    {
+        $this->eight();
+        $this->one();
+    }
+
     /**
-     * 连续涨停超过三日及后续八日未触及跌停
+     * 连续涨停及后续八日未跌停
      */
     public function one()
     {
@@ -41,10 +47,17 @@ class GoBeyondCommand
         $list = [];
         foreach ($codes_info as $code) {
             $result = $chan->pop();
-            $list = array_merge($list, $result);
+            foreach ($result as $key => $value) {
+                $CriticalValue = 0.0089;
+                $num = $value['ztCc'] - 3;
+                $avg = ($value['arPp'] + $value['arZp']) / 2;
+                $num && $avg += $CriticalValue * $num;
+                if (0.999 > $avg) unset($result[$key]);
+            }
+            $list = array_merge($list, array_values($result));
         }
 
-        $sort = array_column($list, 'stDe');
+        $sort = array_column($list, 'aEDe');
         array_multisort($sort, SORT_ASC, $list);
 
         shellPrint($list);
@@ -59,41 +72,49 @@ class GoBeyondCommand
     {
         $dbPool = context()->get('dbPool');
         $db     = $dbPool->getConnection();
-        $result = $db->prepare("SELECT `price`,`zt`,`dt`,`zd`,`date` FROM `hsab` WHERE `code`=$params[code] AND `type`=$params[type] AND `price` IS NOT NULL")->queryAll();
+        $result = $db->prepare("SELECT `price`,`zt`,`dt`,`zg`,`zd`,`date` FROM `hsab` WHERE `code`=$params[code] AND `type`=$params[type] AND `price` IS NOT NULL")->queryAll();
 
         $response = [];
         $ztContinueCount = 0;
-        $aftercontinueCount = 0;
-        $startDate = '';
+        $afterContinueCount = 0;
+        $afterContinueStartPrice = 0.00;
+        $afterContinueStartZd = 0.00;
+        $ztStartDate = '';
         foreach ($result as $value) {
-            if ($value['price'] == $value['zt'] && $aftercontinueCount) {
-                $ztContinueCount = 0;
-                $aftercontinueCount = 0;
-                $startDate = '';
-            } else if ($value['price'] == $value['zt']) {
+            if ($value['price'] == $value['zt']) {
+                if ($afterContinueCount) {
+                    $ztContinueCount = 0;
+                    $afterContinueCount = 0;
+                    $afterContinueStartPrice = 0.00;
+                    $afterContinueStartZd = 0.00;
+                    $ztStartDate = '';
+                }
                 $ztContinueCount ++;
-                !$startDate && $startDate = $value['date'];
-            } else if (3 <= $ztContinueCount) {
-                if ($value['zd'] != $value['dt']) {
-                    $aftercontinueCount ++;
-                    if (8 <= $aftercontinueCount) {
-                        $response[$startDate] = [
+                !$ztStartDate && $ztStartDate = $value['date'];
+            } else {
+                if (3 <= $ztContinueCount && $value['price'] != $value['dt']) {
+                    !$afterContinueStartPrice && $afterContinueStartPrice = $value['price'];
+                    !$afterContinueStartZd && $afterContinueStartZd = $value['zd'];
+
+                    $afterContinueCount ++;
+                    if (8 == $afterContinueCount) {
+                        $response[$ztStartDate] = [
                             'code'  => $params['code'],
-                            'ztCe'  => $ztContinueCount,
-                            'aeCe'  => $aftercontinueCount,
-                            'stDe'  => $startDate,
-                            'edDe'  => $value['date']
+                            'ztCc'  => $ztContinueCount,
+                            'arCc'  => $afterContinueCount,
+                            'arPp'  => bcdiv($value['price'], $afterContinueStartPrice, 3),
+                            'arZp'  => bcdiv($value['zd'], $afterContinueStartZd, 3),
+                            'zSDe'  => $ztStartDate,
+                            'aEDe'  => $value['date'],
                         ];
                     }
                 } else {
                     $ztContinueCount = 0;
-                    $aftercontinueCount = 0;
-                    $startDate = '';
+                    $afterContinueCount = 0;
+                    $afterContinueStartPrice = 0.00;
+                    $afterContinueStartZd = 0.00;
+                    $ztStartDate = '';
                 }
-            } else {
-                $ztContinueCount = 0;
-                $aftercontinueCount = 0;
-                $startDate = '';
             }
         }
 
@@ -102,7 +123,7 @@ class GoBeyondCommand
     }
 
     /**
-     * 三日连跌后续
+     * 连续涨停及后续八日未触及跌停
      */
     public function two()
     {
@@ -120,11 +141,11 @@ class GoBeyondCommand
         $list = [];
         foreach ($codes_info as $code) {
             $result = $chan->pop();
-            $result && $list[] = $result;
+            $list = array_merge($list, array_values($result));
         }
 
-        $sort = array_column($list, 'date');
-        array_multisort($sort, SORT_DESC, $list);
+        $sort = array_column($list, 'arPp');
+        array_multisort($sort, SORT_ASC, $list);
 
         shellPrint($list);
     }
@@ -138,43 +159,57 @@ class GoBeyondCommand
     {
         $dbPool = context()->get('dbPool');
         $db     = $dbPool->getConnection();
-        $result = $db->prepare("SELECT `price`,`up`,`date` FROM `hsab` WHERE `code`=$params[code] AND `type`=$params[type] AND `price` IS NOT NULL ORDER BY `date` DESC")->queryAll();
+        $result = $db->prepare("SELECT `price`,`zt`,`dt`,`zg`,`zd`,`date` FROM `hsab` WHERE `code`=$params[code] AND `type`=$params[type] AND `price` IS NOT NULL")->queryAll();
 
         $response = [];
-        $continue = 0;
-        $count = 0;
-        $down_continue = 0;
+        $ztContinueCount = 0;
+        $afterContinueCount = 0;
+        $afterContinueStartPrice = 0.00;
+        $afterContinueStartZd = 0.00;
+        $ztStartDate = '';
         foreach ($result as $value) {
-            if ($value['up'] <= 0) {
-                $continue ++;
-                2 <= $continue && $down_continue ++;
-                if (3 == $continue) {
-                    break;
+            if ($value['price'] == $value['zt']) {
+                if ($afterContinueCount) {
+                    $ztContinueCount = 0;
+                    $afterContinueCount = 0;
+                    $afterContinueStartPrice = 0.00;
+                    $afterContinueStartZd = 0.00;
+                    $ztStartDate = '';
                 }
+                $ztContinueCount ++;
+                !$ztStartDate && $ztStartDate = $value['date'];
             } else {
-                $continue = 0;
+                if (3 <= $ztContinueCount && $value['price'] != $value['dt']) {
+                    !$afterContinueStartPrice && $afterContinueStartPrice = $value['price'];
+                    !$afterContinueStartZd && $afterContinueStartZd = $value['zd'];
+
+                    $afterContinueCount ++;
+                    if (8 == $afterContinueCount) {
+                        $response[$ztStartDate] = [
+                            'code'  => $params['code'],
+                            'ztCc'  => $ztContinueCount,
+                            'arCc'  => $afterContinueCount,
+                            'arPp'  => bcdiv($value['price'], $afterContinueStartPrice, 3),
+                            'arZp'  => bcdiv($value['zd'], $afterContinueStartZd, 3),
+                            'aePe'  => $value['price'],
+                            'nPie'  => 0.00,
+                            'zSDe'  => $ztStartDate,
+                            'aEDe'  => $value['date'],
+                        ];
+                    } else if (isset($response[$ztStartDate])) {
+                        $response[$ztStartDate]['nPie'] = $value['price'];
+                    }
+                } else {
+                    $ztContinueCount = 0;
+                    $afterContinueCount = 0;
+                    $afterContinueStartPrice = 0.00;
+                    $afterContinueStartZd = 0.00;
+                    $ztStartDate = '';
+                }
             }
-            $count ++;
         }
 
-        $current_price = reset($result)['price'];
-        $start_price = $value['price'];
-        $drpre = bcdiv($down_continue, $count, 2);
-
-        if (0.09 >= $drpre) {
-            $response = [
-                'code'  => $params['code'],
-                'dpre'  => $drpre,
-                'upre'  => bcdiv($current_price, $start_price, 2),
-                'pirce' => $current_price,
-                'date'  => $value['date']
-            ];
-    
-            $chan->push($response);
-        } else {
-            $chan->push([]);
-        }
-
+        $chan->push($response);
         $db->release();
     }
 
@@ -553,12 +588,9 @@ class GoBeyondCommand
         $dbPool = context()->get('dbPool');
         $db     = $dbPool->getConnection();
         $preDateInfo = $db->prepare("SELECT `date` FROM `hsab` WHERE `date`<'$params[date]' ORDER BY `date` DESC")->queryOne();
-        $nextDateInfo = $db->prepare("SELECT `date` FROM `hsab` WHERE `date`>'$params[date]' ORDER BY `date` ASC")->queryOne();
 
         $preDate = $preDateInfo['date'];
-        $nextDate = $nextDateInfo['date'];
-
-        $result = $db->prepare("SELECT `price`,`zt` FROM `hsab` WHERE `code`=$params[code] AND `type`=$params[type] AND `price`=`zt` AND `date` IN ('$preDate', '$nextDate')")->queryAll();
+        $result = $db->prepare("SELECT `price`,`zt` FROM `hsab` WHERE `code`=$params[code] AND `type`=$params[type] AND `price`=`zt` AND `date`='$preDate'")->queryAll();
         if ($result) {
             $chan->push([
                 'code' => $params['code'],

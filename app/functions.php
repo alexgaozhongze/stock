@@ -42,6 +42,8 @@ function dates($limit=10, $format='')
 
 function shellPrint($datas)
 {
+    echo PHP_EOL;
+
     $arrayKeys = [];
     $maxLens = [];
     $list = [];
@@ -68,11 +70,17 @@ function shellPrint($datas)
     }
 
     $count = count($datas);
-    for ($i=0; $i < $count; $i++) { 
+    for ($i=0; $i <= $count; $i++) { 
         foreach ($arrayKeys as $value) {
             $len = $maxLens[$value] + 5;
             printf("% -{$len}s", $list[$value][$i]);
         }
         echo PHP_EOL;
     }
+
+    foreach ($arrayKeys as $value) {
+        $len = $maxLens[$value] + 5;
+        printf("% -{$len}s", $value);
+    }
+    echo PHP_EOL;
 }
