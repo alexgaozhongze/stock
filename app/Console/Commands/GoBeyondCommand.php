@@ -44,7 +44,7 @@ class GoBeyondCommand
             $list = array_merge($list, $result);
         }
 
-        $sort = array_column($list, 'date');
+        $sort = array_column($list, 'stDe');
         array_multisort($sort, SORT_ASC, $list);
 
         shellPrint($list);
@@ -66,16 +66,23 @@ class GoBeyondCommand
         $aftercontinueCount = 0;
         $startDate = '';
         foreach ($result as $value) {
-            if ($value['price'] == $value['zt']) {
+            if ($value['price'] == $value['zt'] && $aftercontinueCount) {
+                $ztContinueCount = 0;
+                $aftercontinueCount = 0;
+                $startDate = '';
+            } else if ($value['price'] == $value['zt']) {
                 $ztContinueCount ++;
                 !$startDate && $startDate = $value['date'];
             } else if (3 <= $ztContinueCount) {
                 if ($value['zd'] != $value['dt']) {
                     $aftercontinueCount ++;
                     if (8 <= $aftercontinueCount) {
-                        $response[] = [
-                            'code' => $params['code'],
-                            'date' => $startDate
+                        $response[$startDate] = [
+                            'code'  => $params['code'],
+                            'ztCe'  => $ztContinueCount,
+                            'aeCe'  => $aftercontinueCount,
+                            'stDe'  => $startDate,
+                            'edDe'  => $value['date']
                         ];
                     }
                 } else {

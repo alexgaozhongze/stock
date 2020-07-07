@@ -38,7 +38,6 @@ class FscjCommand
             $connection->prepare($sql)->execute();
 
             self::handle();
-            echo date('Y-m-d H:i:s'), PHP_EOL;
         });
     }
 

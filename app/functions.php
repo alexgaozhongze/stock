@@ -42,30 +42,37 @@ function dates($limit=10, $format='')
 
 function shellPrint($datas)
 {
-    if (!$datas) {
-        echo 'false', PHP_EOL, PHP_EOL;
-        return false;
+    $arrayKeys = [];
+    $maxLens = [];
+    $list = [];
+
+    foreach ($datas as $key => $value) {
+        if (!$arrayKeys) {
+            $arrayKeys = array_keys($value);
+            foreach ($arrayKeys as $aValue) {
+                $list[$aValue] = [$aValue];
+            }
+        }
+
+        foreach ($arrayKeys as $aValue) {
+            $list[$aValue][] = $value[$aValue];
+        }
     }
 
-    $data = reset($datas);
-    $keys = array_keys($data);
-    foreach ($keys as $value) {
-        printf("% -9s", $value);
+    foreach ($arrayKeys as $aValue) {
+        $list[$aValue][] = $aValue;
     }
-    echo PHP_EOL;
 
-    foreach ($datas as $value) {
-        foreach ($value as $vvalue) {
-            printf("% -9s", $vvalue);
+    foreach ($list as $key => $value) {
+        $maxLens[$key] = max(array_map('strlen', $value));
+    }
+
+    $count = count($datas);
+    for ($i=0; $i < $count; $i++) { 
+        foreach ($arrayKeys as $value) {
+            $len = $maxLens[$value] + 5;
+            printf("% -{$len}s", $list[$value][$i]);
         }
         echo PHP_EOL;
     }
-
-    $data = reset($datas);
-    $keys = array_keys($data);
-    foreach ($keys as $value) {
-        printf("% -9s", $value);
-    }
-
-    echo PHP_EOL;
 }

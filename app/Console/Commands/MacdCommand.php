@@ -22,7 +22,6 @@ class MacdCommand
             if (!checkOpen()) return false;
             
             self::handle();
-            echo date('Y-m-d H:i:s'), PHP_EOL;
         });
     }
 

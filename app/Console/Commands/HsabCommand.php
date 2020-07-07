@@ -71,7 +71,6 @@ class HsabCommand
             $timer = new Timer();
             $timer->tick(18899, function () use ($pages) {
                 self::handle($pages);
-                echo date('Y-m-d H:i:s'), PHP_EOL;
             });
 
             Timer::new()->after(58899, function () use ($timer) {
