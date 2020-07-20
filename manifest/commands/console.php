@@ -40,6 +40,7 @@ return [
         'options'     => [
             [['d', 'daemon'], 'description' => 'Run in the background'],
             [['v', 'version'], 'description' => 'method'],
+            [['e', 'date'], 'description' => 'date'],
         ],
     ],
 

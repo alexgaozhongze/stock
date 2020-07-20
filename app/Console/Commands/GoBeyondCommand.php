@@ -24,22 +24,26 @@ class GoBeyondCommand
 
     public function zero()
     {
-        $this->eight();
         $this->one();
+        $this->four();
     }
 
     /**
-     * 连续涨停及后续八日未跌停
+     * XDR日及前或后日连续涨停
      */
     public function one()
     {
-        $codes_info = $this->getCode();
+        $dbPool = context()->get('dbPool');
+        $db     = $dbPool->getConnection();
+
+        $codes_info = $db->prepare("SELECT `code`,`type`,`date` FROM `hsab` WHERE LEFT(`name`,1) IN ('X','D','R') AND `price`=`zt`")->queryAll();
 
         $chan = new Channel();
         foreach ($codes_info as $value) {
             $params = [
-                'code'          => $value['code'],
-                'type'          => $value['type']
+                'code'  => $value['code'],
+                'type'  => $value['type'],
+                'date'  => $value['date']
             ];
             xgo([$this, 'handleOne'], $chan, $params);
         }
@@ -47,17 +51,10 @@ class GoBeyondCommand
         $list = [];
         foreach ($codes_info as $code) {
             $result = $chan->pop();
-            foreach ($result as $key => $value) {
-                $CriticalValue = 0.0089;
-                $num = $value['ztCc'] - 3;
-                $avg = ($value['arPp'] + $value['arZp']) / 2;
-                $num && $avg += $CriticalValue * $num;
-                if (0.999 > $avg) unset($result[$key]);
-            }
-            $list = array_merge($list, array_values($result));
+            $result && $list[] = $result;
         }
 
-        $sort = array_column($list, 'aEDe');
+        $sort = array_column($list, 'date');
         array_multisort($sort, SORT_ASC, $list);
 
         shellPrint($list);
@@ -72,58 +69,23 @@ class GoBeyondCommand
     {
         $dbPool = context()->get('dbPool');
         $db     = $dbPool->getConnection();
-        $result = $db->prepare("SELECT `price`,`zt`,`dt`,`zg`,`zd`,`date` FROM `hsab` WHERE `code`=$params[code] AND `type`=$params[type] AND `price` IS NOT NULL")->queryAll();
+        $preDateInfo = $db->prepare("SELECT `date` FROM `hsab` WHERE `date`<'$params[date]' ORDER BY `date` DESC")->queryOne();
 
-        $response = [];
-        $ztContinueCount = 0;
-        $afterContinueCount = 0;
-        $afterContinueStartPrice = 0.00;
-        $afterContinueStartZd = 0.00;
-        $ztStartDate = '';
-        foreach ($result as $value) {
-            if ($value['price'] == $value['zt']) {
-                if ($afterContinueCount) {
-                    $ztContinueCount = 0;
-                    $afterContinueCount = 0;
-                    $afterContinueStartPrice = 0.00;
-                    $afterContinueStartZd = 0.00;
-                    $ztStartDate = '';
-                }
-                $ztContinueCount ++;
-                !$ztStartDate && $ztStartDate = $value['date'];
-            } else {
-                if (3 <= $ztContinueCount && $value['price'] != $value['dt']) {
-                    !$afterContinueStartPrice && $afterContinueStartPrice = $value['price'];
-                    !$afterContinueStartZd && $afterContinueStartZd = $value['zd'];
-
-                    $afterContinueCount ++;
-                    if (8 == $afterContinueCount) {
-                        $response[$ztStartDate] = [
-                            'code'  => $params['code'],
-                            'ztCc'  => $ztContinueCount,
-                            'arCc'  => $afterContinueCount,
-                            'arPp'  => bcdiv($value['price'], $afterContinueStartPrice, 3),
-                            'arZp'  => bcdiv($value['zd'], $afterContinueStartZd, 3),
-                            'zSDe'  => $ztStartDate,
-                            'aEDe'  => $value['date'],
-                        ];
-                    }
-                } else {
-                    $ztContinueCount = 0;
-                    $afterContinueCount = 0;
-                    $afterContinueStartPrice = 0.00;
-                    $afterContinueStartZd = 0.00;
-                    $ztStartDate = '';
-                }
-            }
+        $preDate = $preDateInfo['date'];
+        $result = $db->prepare("SELECT `price`,`zt` FROM `hsab` WHERE `code`=$params[code] AND `type`=$params[type] AND `price`=`zt` AND `date`='$preDate'")->queryAll();
+        if ($result) {
+            $chan->push([
+                'code' => $params['code'],
+                'date' => $params['date']
+            ]);
+        } else {
+            $chan->push([]);
         }
-
-        $chan->push($response);
         $db->release();
     }
 
     /**
-     * 连续涨停及后续八日未触及跌停
+     * 连续涨停及后续八日未跌停
      */
     public function two()
     {
@@ -141,10 +103,17 @@ class GoBeyondCommand
         $list = [];
         foreach ($codes_info as $code) {
             $result = $chan->pop();
+            foreach ($result as $key => $value) {
+                $CriticalValue = 0.0089;
+                $num = $value['ztCc'] - 3;
+                $avg = ($value['arPp'] + $value['arZp']) / 2;
+                $num && $avg += $CriticalValue * $num;
+                if (0.999 > $avg) unset($result[$key]);
+            }
             $list = array_merge($list, array_values($result));
         }
 
-        $sort = array_column($list, 'arPp');
+        $sort = array_column($list, 'aEDe');
         array_multisort($sort, SORT_ASC, $list);
 
         shellPrint($list);
@@ -191,13 +160,9 @@ class GoBeyondCommand
                             'arCc'  => $afterContinueCount,
                             'arPp'  => bcdiv($value['price'], $afterContinueStartPrice, 3),
                             'arZp'  => bcdiv($value['zd'], $afterContinueStartZd, 3),
-                            'aePe'  => $value['price'],
-                            'nPie'  => 0.00,
                             'zSDe'  => $ztStartDate,
                             'aEDe'  => $value['date'],
                         ];
-                    } else if (isset($response[$ztStartDate])) {
-                        $response[$ztStartDate]['nPie'] = $value['price'];
                     }
                 } else {
                     $ztContinueCount = 0;
@@ -214,17 +179,19 @@ class GoBeyondCommand
     }
 
     /**
-     * 六日连涨后续
+     * 涨停后的6到8个交易日 看最低最高浮动
      */
     public function three()
     {
+        $date = Flag::string(['e', 'date'], date('Y-m-d'));
         $codes_info = $this->getCode();
 
         $chan = new Channel();
         foreach ($codes_info as $value) {
             $params = [
-                'code'          => $value['code'],
-                'type'          => $value['type']
+                'code'  => $value['code'],
+                'type'  => $value['type'],
+                'stDe'  => $date
             ];
             xgo([$this, 'handleThree'], $chan, $params);
         }
@@ -235,7 +202,7 @@ class GoBeyondCommand
             $result && $list[] = $result;
         }
 
-        $sort = array_column($list, 'date');
+        $sort = array_column($list, 'ztCt');
         array_multisort($sort, SORT_ASC, $list);
 
         shellPrint($list);
@@ -250,27 +217,93 @@ class GoBeyondCommand
     {
         $dbPool = context()->get('dbPool');
         $db     = $dbPool->getConnection();
-        $result = $db->prepare("SELECT `price`,`up`,`zt`,`zg`,`date` FROM `hsab` WHERE `code`=$params[code] AND `type`=$params[type] AND `price` IS NOT NULL ORDER BY `date` DESC")->queryAll();
+        $result = $db->prepare("SELECT `price`,`zt`,`zf` FROM `hsab` WHERE `code`=$params[code] AND `type`=$params[type] AND `date`<'$params[stDe]' AND `price` IS NOT NULL ORDER BY `date` DESC LIMIT 13")->queryAll();
 
+        $ztCount = 0;
         foreach ($result as $key => $value) {
-            $stopKey = $key + 6;
-            if (isset($result[$stopKey])) {
-                $stopPrice = $result[$stopKey]['price'];
-                $nowPrice = $value['price'];
-                if (0.189 <= ($nowPrice - $stopPrice) / $stopPrice) {
-                    $allUp = true;
-                    $hasUpStop = false;
-                    for ($i = 0; $i <= 5; $i ++) {
-                        $checkKey = $key + $i;
-                        0 >= $result[$checkKey]['up'] && $allUp = false;
-                        $result[$checkKey]['price'] == $result[$checkKey]['zt'] && $hasUpStop = true;
-                    }
-                    $allUp && !$hasUpStop && $chan->push([
-                        'code' => $params['code'],
-                        'date' => $value['date']
-                    ]);
-                }
+            $key <= 4 && $value['price'] == $value['zt'] && $value['zf'] >= 9.99 && $ztCount ++;
+            $key > 4 && $value['price'] == $value['zt'] && $ztCount = 0;
+        }
+
+        if ($ztCount >= 3) {
+            $chan->push([
+                'code'  => $params['code'],
+                'ztCt'  => $ztCount
+            ]);
+        } else {
+            $chan->push([]);
+        }
+        $db->release();
+    }
+
+    /**
+     * 连续振幅超9.99且最低未触及跌停
+     */
+    public function four()
+    {
+        $startDate = date('Y-m-d');
+        $codes_info = $this->getCode();
+
+        $chan = new Channel();
+        foreach ($codes_info as $value) {
+            $params = [
+                'code'  => $value['code'],
+                'type'  => $value['type'],
+                'sDate' => $startDate
+            ];
+            xgo([$this, 'handleFour'], $chan, $params);
+        }
+
+        $list = [];
+        foreach ($codes_info as $code) {
+            $result = $chan->pop();
+            $result && $list[] = $result;
+        }
+
+        $sort = array_column($list, 'continue');
+        array_multisort($sort, SORT_ASC, $list);
+
+        shellPrint($list);
+    }
+
+    /**
+     * 查询数据
+     * @param Channel $chan
+     * @param array $params
+     */
+    public function handleFour(Channel $chan, $params)
+    {
+        $dbPool = context()->get('dbPool');
+        $db     = $dbPool->getConnection();
+        $result = $db->prepare("SELECT `price`,`up`,`dt`,`zd`,`zf`,`date` FROM `hsab` WHERE `code`=$params[code] AND `type`=$params[type] AND `date`<='$params[sDate]' ORDER BY `date` DESC LIMIT 9")->queryAll();
+
+        $continue       = 0;
+        $currentPrice   = 0.00;
+        $currentUp      = 0.00;
+        $currentZd      = 0.00;
+        foreach ($result as $value) {
+            if ($params['sDate'] == $value['date']) {
+                $currentPrice   = $value['price'];
+                $currentUp      = $value['up'];
+                $currentZd      = $value['zd'];
+                continue;
             }
+    
+            if (9.99 > $value['zf'] || $value['zd'] == $value['dt']) {
+                break;
+            }
+
+            $continue ++;
+        }
+
+        if ($continue >= 3) {
+            $chan->push([
+                'code'      => $params['code'],
+                'continue'  => $continue,
+                'price'     => $currentPrice,
+                'zd'        => $currentZd,
+                'up'        => $currentUp
+            ]);
         }
 
         $db->release();
@@ -279,7 +312,7 @@ class GoBeyondCommand
     /**
      * 连涨后续
      */
-    public function four()
+    public function five()
     {
         $codes_info = $this->getCode();
 
@@ -289,7 +322,7 @@ class GoBeyondCommand
                 'code'          => $value['code'],
                 'type'          => $value['type']
             ];
-            xgo([$this, 'handleFour'], $chan, $params);
+            xgo([$this, 'handleFive'], $chan, $params);
         }
 
         $list = [];
@@ -314,7 +347,7 @@ class GoBeyondCommand
      * @param Channel $chan
      * @param array $params
      */
-    public function handleFour(Channel $chan, $params)
+    public function handleFive(Channel $chan, $params)
     {
         $dbPool = context()->get('dbPool');
         $db     = $dbPool->getConnection();
@@ -362,7 +395,7 @@ class GoBeyondCommand
     /**
      * 涨停第二天触及跌停未跌停收盘
      */
-    public function five()
+    public function six()
     {
         $codes_info = $this->getCode();
 
@@ -372,7 +405,7 @@ class GoBeyondCommand
                 'code'          => $value['code'],
                 'type'          => $value['type']
             ];
-            xgo([$this, 'handleFive'], $chan, $params);
+            xgo([$this, 'handleSix'], $chan, $params);
         }
 
         $list = [];
@@ -392,7 +425,7 @@ class GoBeyondCommand
      * @param Channel $chan
      * @param array $params
      */
-    public function handleFive(Channel $chan, $params)
+    public function handleSix(Channel $chan, $params)
     {
         $dbPool = context()->get('dbPool');
         $db     = $dbPool->getConnection();
@@ -419,7 +452,7 @@ class GoBeyondCommand
     /**
      * 连续九天上涨未涨停
      */
-    public function six()
+    public function seven()
     {
         $codes_info = $this->getCode();
 
@@ -431,7 +464,7 @@ class GoBeyondCommand
                 'sDate' => '2020-06-03',
                 'eDate' => '2020-06-15'
             ];
-            xgo([$this, 'handleSix'], $chan, $params);
+            xgo([$this, 'handleSeven'], $chan, $params);
         }
 
         $list = [];
@@ -451,7 +484,7 @@ class GoBeyondCommand
      * @param Channel $chan
      * @param array $params
      */
-    public function handleSix(Channel $chan, $params)
+    public function handleSeven(Channel $chan, $params)
     {
         $dbPool = context()->get('dbPool');
         $db     = $dbPool->getConnection();
@@ -477,7 +510,7 @@ class GoBeyondCommand
     /**
      * 涨停加第二日触及跌停
      */
-    public function seven()
+    public function eight()
     {
         $dbPool = context()->get('dbPool');
         $db     = $dbPool->getConnection();
@@ -490,7 +523,7 @@ class GoBeyondCommand
                 'code'  => $value['code'],
                 'type'  => $value['type']
             ];
-            xgo([$this, 'handleSeven'], $chan, $params);
+            xgo([$this, 'handleEight'], $chan, $params);
         }
 
         $list = [];
@@ -517,7 +550,7 @@ class GoBeyondCommand
      * @param Channel $chan
      * @param array $params
      */
-    public function handleSeven(Channel $chan, $params)
+    public function handleEight(Channel $chan, $params)
     {
         $dbPool = context()->get('dbPool');
         $db     = $dbPool->getConnection();
@@ -545,63 +578,6 @@ class GoBeyondCommand
         $chan->push($response);
         $db->release();
     }
-
-    /**
-     * XDR日及前或后日连续涨停
-     */
-    public function eight()
-    {
-        $dbPool = context()->get('dbPool');
-        $db     = $dbPool->getConnection();
-
-        $codes_info = $db->prepare("SELECT `code`,`type`,`date` FROM `hsab` WHERE LEFT(`name`,1) IN ('X','D','R') AND `price`=`zt`")->queryAll();
-
-        $chan = new Channel();
-        foreach ($codes_info as $value) {
-            $params = [
-                'code'  => $value['code'],
-                'type'  => $value['type'],
-                'date'  => $value['date']
-            ];
-            xgo([$this, 'handleEight'], $chan, $params);
-        }
-
-        $list = [];
-        foreach ($codes_info as $code) {
-            $result = $chan->pop();
-            $result && $list[] = $result;
-        }
-
-        $sort = array_column($list, 'date');
-        array_multisort($sort, SORT_ASC, $list);
-
-        shellPrint($list);
-    }
-
-    /**
-     * 查询数据
-     * @param Channel $chan
-     * @param array $params
-     */
-    public function handleEight(Channel $chan, $params)
-    {
-        $dbPool = context()->get('dbPool');
-        $db     = $dbPool->getConnection();
-        $preDateInfo = $db->prepare("SELECT `date` FROM `hsab` WHERE `date`<'$params[date]' ORDER BY `date` DESC")->queryOne();
-
-        $preDate = $preDateInfo['date'];
-        $result = $db->prepare("SELECT `price`,`zt` FROM `hsab` WHERE `code`=$params[code] AND `type`=$params[type] AND `price`=`zt` AND `date`='$preDate'")->queryAll();
-        if ($result) {
-            $chan->push([
-                'code' => $params['code'],
-                'date' => $params['date']
-            ]);
-        } else {
-            $chan->push([]);
-        }
-        $db->release();
-    }
-
 
     /**
      * 涨停日开板数
