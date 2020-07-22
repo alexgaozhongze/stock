@@ -25,7 +25,7 @@ class GoBeyondCommand
     public function zero()
     {
         $this->one();
-        $this->four();
+        $this->two();
     }
 
     /**
@@ -85,17 +85,19 @@ class GoBeyondCommand
     }
 
     /**
-     * 连续涨停及后续八日未跌停
+     * 连续振幅超9.99且最低未触及跌停
      */
     public function two()
     {
+        $startDate = date('Y-m-d');
         $codes_info = $this->getCode();
 
         $chan = new Channel();
         foreach ($codes_info as $value) {
             $params = [
-                'code'          => $value['code'],
-                'type'          => $value['type']
+                'code'  => $value['code'],
+                'type'  => $value['type'],
+                'sDate' => $startDate
             ];
             xgo([$this, 'handleTwo'], $chan, $params);
         }
@@ -103,17 +105,10 @@ class GoBeyondCommand
         $list = [];
         foreach ($codes_info as $code) {
             $result = $chan->pop();
-            foreach ($result as $key => $value) {
-                $CriticalValue = 0.0089;
-                $num = $value['ztCc'] - 3;
-                $avg = ($value['arPp'] + $value['arZp']) / 2;
-                $num && $avg += $CriticalValue * $num;
-                if (0.999 > $avg) unset($result[$key]);
-            }
-            $list = array_merge($list, array_values($result));
+            $result && $list[] = $result;
         }
 
-        $sort = array_column($list, 'aEDe');
+        $sort = array_column($list, 'continue');
         array_multisort($sort, SORT_ASC, $list);
 
         shellPrint($list);
@@ -128,53 +123,40 @@ class GoBeyondCommand
     {
         $dbPool = context()->get('dbPool');
         $db     = $dbPool->getConnection();
-        $result = $db->prepare("SELECT `price`,`zt`,`dt`,`zg`,`zd`,`date` FROM `hsab` WHERE `code`=$params[code] AND `type`=$params[type] AND `price` IS NOT NULL")->queryAll();
+        $result = $db->prepare("SELECT `price`,`up`,`dt`,`zd`,`zf`,`date` FROM `hsab` WHERE `code`=$params[code] AND `type`=$params[type] AND `date`<='$params[sDate]' ORDER BY `date` DESC LIMIT 9")->queryAll();
 
-        $response = [];
-        $ztContinueCount = 0;
-        $afterContinueCount = 0;
-        $afterContinueStartPrice = 0.00;
-        $afterContinueStartZd = 0.00;
-        $ztStartDate = '';
+        $continue       = 0;
+        $currentPrice   = 0.00;
+        $currentUp      = 0.00;
+        $currentZd      = 0.00;
+        $currentZf      = 0.00;
         foreach ($result as $value) {
-            if ($value['price'] == $value['zt']) {
-                if ($afterContinueCount) {
-                    $ztContinueCount = 0;
-                    $afterContinueCount = 0;
-                    $afterContinueStartPrice = 0.00;
-                    $afterContinueStartZd = 0.00;
-                    $ztStartDate = '';
-                }
-                $ztContinueCount ++;
-                !$ztStartDate && $ztStartDate = $value['date'];
-            } else {
-                if (3 <= $ztContinueCount && $value['price'] != $value['dt']) {
-                    !$afterContinueStartPrice && $afterContinueStartPrice = $value['price'];
-                    !$afterContinueStartZd && $afterContinueStartZd = $value['zd'];
-
-                    $afterContinueCount ++;
-                    if (8 == $afterContinueCount) {
-                        $response[$ztStartDate] = [
-                            'code'  => $params['code'],
-                            'ztCc'  => $ztContinueCount,
-                            'arCc'  => $afterContinueCount,
-                            'arPp'  => bcdiv($value['price'], $afterContinueStartPrice, 3),
-                            'arZp'  => bcdiv($value['zd'], $afterContinueStartZd, 3),
-                            'zSDe'  => $ztStartDate,
-                            'aEDe'  => $value['date'],
-                        ];
-                    }
-                } else {
-                    $ztContinueCount = 0;
-                    $afterContinueCount = 0;
-                    $afterContinueStartPrice = 0.00;
-                    $afterContinueStartZd = 0.00;
-                    $ztStartDate = '';
-                }
+            if ($params['sDate'] == $value['date']) {
+                $currentPrice   = $value['price'];
+                $currentUp      = $value['up'];
+                $currentZd      = $value['zd'];
+                $currentZf      = $value['zf'];
+                continue;
             }
+    
+            if (9.99 > $value['zf'] || $value['zd'] == $value['dt']) {
+                break;
+            }
+
+            $continue ++;
         }
 
-        $chan->push($response);
+        if ($continue >= 3) {
+            $chan->push([
+                'code'      => $params['code'],
+                'continue'  => $continue,
+                'price'     => $currentPrice,
+                'zd'        => $currentZd,
+                'up'        => $currentUp,
+                'zf'        => $currentZf
+            ]);
+        }
+
         $db->release();
     }
 
@@ -233,82 +215,6 @@ class GoBeyondCommand
         } else {
             $chan->push([]);
         }
-        $db->release();
-    }
-
-    /**
-     * 连续振幅超9.99且最低未触及跌停
-     */
-    public function four()
-    {
-        $startDate = date('Y-m-d');
-        $codes_info = $this->getCode();
-
-        $chan = new Channel();
-        foreach ($codes_info as $value) {
-            $params = [
-                'code'  => $value['code'],
-                'type'  => $value['type'],
-                'sDate' => $startDate
-            ];
-            xgo([$this, 'handleFour'], $chan, $params);
-        }
-
-        $list = [];
-        foreach ($codes_info as $code) {
-            $result = $chan->pop();
-            $result && $list[] = $result;
-        }
-
-        $sort = array_column($list, 'continue');
-        array_multisort($sort, SORT_ASC, $list);
-
-        shellPrint($list);
-    }
-
-    /**
-     * 查询数据
-     * @param Channel $chan
-     * @param array $params
-     */
-    public function handleFour(Channel $chan, $params)
-    {
-        $dbPool = context()->get('dbPool');
-        $db     = $dbPool->getConnection();
-        $result = $db->prepare("SELECT `price`,`up`,`dt`,`zd`,`zf`,`date` FROM `hsab` WHERE `code`=$params[code] AND `type`=$params[type] AND `date`<='$params[sDate]' ORDER BY `date` DESC LIMIT 9")->queryAll();
-
-        $continue       = 0;
-        $currentPrice   = 0.00;
-        $currentUp      = 0.00;
-        $currentZd      = 0.00;
-        $currentZf      = 0.00;
-        foreach ($result as $value) {
-            if ($params['sDate'] == $value['date']) {
-                $currentPrice   = $value['price'];
-                $currentUp      = $value['up'];
-                $currentZd      = $value['zd'];
-                $currentZf      = $value['zf'];
-                continue;
-            }
-    
-            if (9.99 > $value['zf'] || $value['zd'] == $value['dt']) {
-                break;
-            }
-
-            $continue ++;
-        }
-
-        if ($continue >= 3) {
-            $chan->push([
-                'code'      => $params['code'],
-                'continue'  => $continue,
-                'price'     => $currentPrice,
-                'zd'        => $currentZd,
-                'up'        => $currentUp,
-                'zf'        => $currentZf
-            ]);
-        }
-
         $db->release();
     }
 
