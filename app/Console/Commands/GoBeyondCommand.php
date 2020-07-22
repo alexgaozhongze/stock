@@ -281,11 +281,13 @@ class GoBeyondCommand
         $currentPrice   = 0.00;
         $currentUp      = 0.00;
         $currentZd      = 0.00;
+        $currentZf      = 0.00;
         foreach ($result as $value) {
             if ($params['sDate'] == $value['date']) {
                 $currentPrice   = $value['price'];
                 $currentUp      = $value['up'];
                 $currentZd      = $value['zd'];
+                $currentZf      = $value['zf'];
                 continue;
             }
     
@@ -302,7 +304,8 @@ class GoBeyondCommand
                 'continue'  => $continue,
                 'price'     => $currentPrice,
                 'zd'        => $currentZd,
-                'up'        => $currentUp
+                'up'        => $currentUp,
+                'zf'        => $currentZf
             ]);
         }
 
