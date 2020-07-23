@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use Mix\Console\CommandLine\Flag;
 use Swoole\Coroutine\Channel;
+use Mix\Concurrent\Timer;
 
 /**
  * Class GoBeyondCommand
@@ -24,7 +25,6 @@ class GoBeyondCommand
 
     public function zero()
     {
-        echo date('Y-m-d H:i:s'), PHP_EOL;
         $this->one();
         $this->two();
         $this->three();
@@ -170,6 +170,20 @@ class GoBeyondCommand
      */
     public function three()
     {
+        $this->goThree();
+
+        $timer = new Timer();
+        $timer->tick(9988, function () {
+            $this->goThree();
+        });
+
+        Timer::new()->after(19988888, function () use ($timer) {
+            $timer->clear();
+        });
+    }
+
+    public function goThree()
+    {
         $date = Flag::string(['e', 'date'], date('Y-m-d'));
         $codes_info = $this->getCode();
 
@@ -193,6 +207,7 @@ class GoBeyondCommand
         array_multisort($sort, SORT_ASC, $list);
 
         shellPrint($list);
+        echo PHP_EOL;
     }
 
     /**
@@ -212,6 +227,7 @@ class GoBeyondCommand
         }
         if ($value['zg'] >= $maxZg) {
             $info = $db->prepare("SELECT `price`,`up`,`zt`,`zf`,`zg` FROM `hsab` WHERE `code`=$params[code] AND `type`=$params[type] AND `date`=CURDATE()")->queryOne();
+            // if ($info['price'] == $info['zg'] && $info['price'] != $info['zt']) {
             if ($info['price'] == $info['zg'] && $info['price'] != $info['zt']) {
                 $chan->push([
                     'code'  => $params['code'],
