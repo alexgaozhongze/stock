@@ -42,7 +42,8 @@ function dates($limit=10, $format='')
 
 function shellPrint($datas)
 {
-    echo PHP_EOL;
+    $trace = debug_backtrace();
+    echo $trace[1]['function'], PHP_EOL;
 
     $arrayKeys = [];
     $maxLens = [];

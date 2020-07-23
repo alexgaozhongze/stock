@@ -24,8 +24,11 @@ class GoBeyondCommand
 
     public function zero()
     {
+        echo date('Y-m-d H:i:s'), PHP_EOL;
         $this->one();
         $this->two();
+        $this->three();
+        echo PHP_EOL;
     }
 
     /**
@@ -79,7 +82,7 @@ class GoBeyondCommand
                 'date' => $params['date']
             ]);
         } else {
-            $chan->push([]);
+            $chan->push(false);
         }
         $db->release();
     }
@@ -155,13 +158,15 @@ class GoBeyondCommand
                 'up'        => $currentUp,
                 'zf'        => $currentZf
             ]);
+        } else {
+            $chan->push(false);
         }
 
         $db->release();
     }
 
     /**
-     * 涨停后的6到8个交易日 看最低最高浮动
+     * 最高达到九十九个交易日新高
      */
     public function three()
     {
@@ -184,7 +189,7 @@ class GoBeyondCommand
             $result && $list[] = $result;
         }
 
-        $sort = array_column($list, 'ztCt');
+        $sort = array_column($list, 'up');
         array_multisort($sort, SORT_ASC, $list);
 
         shellPrint($list);
@@ -199,22 +204,27 @@ class GoBeyondCommand
     {
         $dbPool = context()->get('dbPool');
         $db     = $dbPool->getConnection();
-        $result = $db->prepare("SELECT `price`,`zt`,`zf` FROM `hsab` WHERE `code`=$params[code] AND `type`=$params[type] AND `date`<'$params[stDe]' AND `price` IS NOT NULL ORDER BY `date` DESC LIMIT 13")->queryAll();
+        $result = $db->prepare("SELECT `zg` FROM `hsab` WHERE `code`=$params[code] AND `type`=$params[type] AND `date`<='$params[stDe]' AND `price` IS NOT NULL LIMIT 99")->queryAll();
 
-        $ztCount = 0;
-        foreach ($result as $key => $value) {
-            $key <= 4 && $value['price'] == $value['zt'] && $value['zf'] >= 9.99 && $ztCount ++;
-            $key > 4 && $value['price'] == $value['zt'] && $ztCount = 0;
+        $maxZg = 0.00;
+        foreach ($result as $value) {
+            $value['zg'] >= $maxZg && $maxZg = $value['zg'];
         }
-
-        if ($ztCount >= 3) {
-            $chan->push([
-                'code'  => $params['code'],
-                'ztCt'  => $ztCount
-            ]);
+        if ($value['zg'] >= $maxZg) {
+            $info = $db->prepare("SELECT `price`,`up`,`zt`,`zf`,`zg` FROM `hsab` WHERE `code`=$params[code] AND `type`=$params[type] AND `date`=CURDATE()")->queryOne();
+            if ($info['price'] == $info['zg'] && $info['price'] != $info['zt']) {
+                $chan->push([
+                    'code'  => $params['code'],
+                    'pirce' => $info['price'],
+                    'up'    => $info['up'],
+                ]);
+            } else {
+                $chan->push(false);
+            }
         } else {
-            $chan->push([]);
+            $chan->push(false);
         }
+
         $db->release();
     }
 
