@@ -26,6 +26,14 @@ return [
         ],
     ],
 
+    'hbmd' => [
+        \App\Console\Commands\HsabMacdCommand::class,
+        'description' => "\thsabmacd",
+        'options'     => [
+            [['d', 'daemon'], 'description' => 'Run in the background'],
+        ],
+    ],
+
     'wssc' => [
         \App\Console\Commands\WebSocketSendCommand::class,
         'description' => "\tmacd",

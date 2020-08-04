@@ -40,4 +40,9 @@ class IndexController
         return ResponseHelper::view($response, 'login.index');
     }
 
+    public function upranking(ServerRequest $request, Response $response)
+    {
+        return ResponseHelper::view($response, 'upranking.index');
+    }
+
 }

@@ -1,11 +1,14 @@
+<!DOCTYPE html>
 <html>
 <head>
-    <title><?= $this->title ?></title>
-    <script src="./jquery-3.5.1.min.js"></script>
+  <meta charset="UTF-8">
+  <title><?= $this->title ?></title>
+    <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
 </head>
+<script src="https://unpkg.com/vue/dist/vue.js"></script>
+<script src="https://unpkg.com/element-ui/lib/index.js"></script>
+<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
 <body>
-
-<?= $content ?>
-
+  <?= $content ?>
 </body>
 </html>

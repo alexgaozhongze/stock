@@ -24,6 +24,7 @@ return [
                 // 普通路由
                 'POST /file/upload' => [[\App\Api\Controllers\FileController::class, 'upload'], 'middleware' => [\App\Api\Middleware\ActionMiddleware::class]],
                 '/curl'             => [[\App\Api\Controllers\CurlController::class, 'index'], 'middleware' => [\App\Api\Middleware\ActionMiddleware::class]],
+                '/upranking'        => [[\App\Api\Controllers\UpRankingController::class, 'index'], 'middleware' => [\App\Api\Middleware\ActionMiddleware::class]],
                 // 分组路由
                 '/v2'               => [
                     // 分组中间件
@@ -62,6 +63,7 @@ return [
                 // 普通路由
                 '/'             => [[\App\Web\Controllers\IndexController::class, 'index'], 'middleware' => [\App\Web\Middleware\ActionMiddleware::class]],
                 '/login'        => [[\App\Web\Controllers\IndexController::class, 'login'], 'middleware' => [\App\Web\Middleware\ActionMiddleware::class]],
+                '/upranking'    => [[\App\Web\Controllers\IndexController::class, 'upranking'], 'middleware' => [\App\Web\Middleware\ActionMiddleware::class]],
                 '/profile/{id}' => [[\App\Web\Controllers\ProfileController::class, 'index'], 'middleware' => [\App\Web\Middleware\ActionMiddleware::class]],
                 '/ws'           => [[\App\Web\Controllers\WebSocketController::class, 'index'], 'middleware' => [\App\Web\Middleware\ActionMiddleware::class]],
             ],

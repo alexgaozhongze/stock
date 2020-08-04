@@ -23,7 +23,7 @@ function checkOpen()
     return $date_exists ? true : false;
 }
 
-function dates($limit=10, $format='')
+function dates($limit=18, $format='')
 {
     $connection = context()->get('dbPool')->getConnection();
     $sql = "SELECT `date` FROM `hsab` WHERE `date`<>CURDATE() GROUP BY `date` ORDER BY `date` DESC LIMIT $limit";
