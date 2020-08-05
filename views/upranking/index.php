@@ -45,6 +45,12 @@ $this->title = 'UpRanking';
             </el-table-column>
             <el-table-column prop="date" label="date">
             </el-table-column>
+            <el-table-column prop="dif" label="dif">
+            </el-table-column>
+            <el-table-column prop="dea" label="dea">
+            </el-table-column>
+            <el-table-column prop="macd" label="macd">
+            </el-table-column>
             <el-table-column prop="type" label="type">
             </el-table-column>
         </el-table>
@@ -138,7 +144,6 @@ $this->title = 'UpRanking';
                 row,
                 rowIndex
             }) {
-                console.log(this.curDate);
                 if (this.curDate === row.date) {
                     return 'success-row';
                 }

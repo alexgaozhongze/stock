@@ -63,7 +63,6 @@ class UpRankingController
         $responseList = [];
         foreach ($list as $value) {
             if (1.89 > $value['rise']) break;
-            if (2.22 > $value['rise']) break;
             $sql        = "SELECT * FROM `hsab` WHERE `code`=$value[code] AND `type`=$value[type] AND `date`>='$startDate'";
             $codesList  = $db->prepare($sql)->queryAll();
             foreach ($codesList as $key => $clValue) {
