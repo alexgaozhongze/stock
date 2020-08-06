@@ -5,7 +5,6 @@ namespace App\Api\Controllers;
 use App\Common\Helpers\ResponseHelper;
 use Mix\Http\Message\Response;
 use Mix\Http\Message\ServerRequest;
-use PDO;
 use Swoole\Coroutine\Channel;
 
 /**
@@ -35,7 +34,7 @@ class UpRankingController
 
         $dbPool = context()->get('dbPool');
         $db     = $dbPool->getConnection();
-        $sql    = "SELECT `code`,`type` FROM `hsab` WHERE `date`='$endDate' AND `price` IS NOT NULL AND LEFT(`name`,1) NOT IN ('*','S') AND LEFT(`code`,3) NOT IN (300,688) AND `code` NOT IN (SELECT `code` FROM `hsab` WHERE `date` >= (SELECT MIN(`date`) FROM (SELECT `date` FROM `hsab` WHERE `date` <> CURDATE() GROUP BY `date` ORDER BY `date` DESC LIMIT 99) AS `t`) AND LEFT(`name`,1) IN ('N','退') GROUP BY `code`)";
+        $sql    = "SELECT `code`,`type` FROM `hsab` WHERE `date`='$endDate' AND `price` IS NOT NULL AND LEFT(`name`,1) NOT IN ('*','S','退') AND LEFT(`code`,3) NOT IN (300,688) GROUP BY `code`";
         $codes  = $db->prepare($sql)->queryAll();
         $db->release();
 
@@ -62,7 +61,7 @@ class UpRankingController
         $db = $dbPool->getConnection();
         $responseList = [];
         foreach ($list as $value) {
-            if (1.89 > $value['rise']) break;
+            if (1.99999999 > $value['rise']) break;
             $sql        = "SELECT * FROM `hsab` WHERE `code`=$value[code] AND `type`=$value[type] AND `date`>='$startDate'";
             $codesList  = $db->prepare($sql)->queryAll();
             foreach ($codesList as $key => $clValue) {
