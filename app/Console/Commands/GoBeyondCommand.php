@@ -249,14 +249,8 @@ class GoBeyondCommand
      */
     public function four()
     {
+        $dates      = dates(58);
         $codes_info = $this->getCode();
-        // $codes_info = [
-        //     [
-        //         'code' => 2625,
-        //         'type' => 2
-        //     ]
-        // ];
-        $dates = dates(58);
 
         $chan = new Channel();
         foreach ($codes_info as $value) {

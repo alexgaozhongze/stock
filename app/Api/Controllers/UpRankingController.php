@@ -28,13 +28,10 @@ class UpRankingController
     {
         // $post = $request->getParsedBody();
 
-        $dates = dates(18);
-        $startDate = reset($dates);
-        $endDate = end($dates);
-
+        $dates  = dates(19 + 9);
         $dbPool = context()->get('dbPool');
         $db     = $dbPool->getConnection();
-        $sql    = "SELECT `code`,`type` FROM `hsab` WHERE `date`='$endDate' AND `price` IS NOT NULL AND LEFT(`name`,1) NOT IN ('*','S','退') AND LEFT(`code`,3) NOT IN (300,688) GROUP BY `code`";
+        $sql    = "SELECT `code`,`type` FROM `hsab` WHERE `date`=CURDATE() AND `price` IS NOT NULL AND LEFT(`name`,1) NOT IN ('*','S') AND LEFT(`code`,3) NOT IN (300,688)";
         $codes  = $db->prepare($sql)->queryAll();
         $db->release();
 
@@ -43,32 +40,35 @@ class UpRankingController
             $params = [
                 'code'  => $value['code'],
                 'type'  => $value['type'],
-                'sDate' => $startDate,
-                'eDate' => $endDate
+                'sDate' => reset($dates)
             ];
             xgo([$this, 'handle'], $chan, $params);
         }
 
-        $list = [];
+        $list       = [];
+        $riseList   = [];
         foreach ($codes as $value) {
             $result = $chan->pop();
-            $result && $list[] = $result;
-        }
-
-        $sort = array_column($list, 'rise');
-        array_multisort($sort, SORT_DESC, $list);
-
-        $db = $dbPool->getConnection();
-        $responseList = [];
-        foreach ($list as $value) {
-            if (1.99999999 > $value['rise']) break;
-            $sql        = "SELECT * FROM `hsab` WHERE `code`=$value[code] AND `type`=$value[type] AND `date`>='$startDate'";
-            $codesList  = $db->prepare($sql)->queryAll();
-            foreach ($codesList as $key => $clValue) {
-                $codesList[$key]['rise'] = $value['rise'];
+            if ($result) {
+                $riseList[] = [
+                    'code'  => end($result)['code'],
+                    'type'  => end($result)['type'],
+                    'rise'  => end($result)['rise']
+                ];
+                $list = array_merge($list, $result);
             }
-            $responseList = array_merge($responseList, $codesList);
         }
+
+        $sort = array_column($riseList, 'rise');
+        array_multisort($sort, SORT_DESC, $riseList);
+
+        $responseList = [];
+        foreach ($riseList as $value) {
+            foreach ($list as $lValue) {
+                $value['code'] == $lValue['code'] && $value['type'] == $lValue['type'] && $responseList[] = $lValue;
+            }
+        }
+
         $db->release();
 
         $content = ['code' => 0, 'message' => 'OK', 'list' => $responseList];
@@ -79,19 +79,32 @@ class UpRankingController
     {
         $dbPool = context()->get('dbPool');
         $db     = $dbPool->getConnection();
-        $sInfo  = $db->prepare("SELECT `zs` FROM `hsab` WHERE `code`=$params[code] AND `type`=$params[type] AND `date`>='$params[sDate]' AND `price` IS NOT NULL ORDER BY `date` ASC")->queryOne();
-        $eInfo  = $db->prepare("SELECT `price` FROM `hsab` WHERE `code`=$params[code] AND `type`=$params[type] AND `date`<='$params[eDate]' AND `price` IS NOT NULL ORDER BY `date` DESC")->queryOne();
+        $result = $db->prepare("SELECT * FROM `hsab` WHERE `code`=$params[code] AND `type`=$params[type] AND `date`>='$params[sDate]'")->queryAll();
 
-        if ($sInfo && $eInfo) {
-            $pre = bcdiv($eInfo['price'], $sInfo['zs'], 8);
-            $chan->push([
-                'code'  => $params['code'],
-                'type'  => $params['type'],
-                'rise'   => $pre
-            ]);
+        foreach ($result as $key => $value) {
+            if (18 >= $key) continue;
+
+            $rise = 0;
+            for ($i = 18; $i > 0; $i --) {
+                if ($result[$key - $i]['zs']) {
+                    $pre18  = $result[$key - $i];
+                    $rise   = $pre18['zs'] ? bcdiv($value['price'], $pre18['zs'], 9) : 0;
+                    break;
+                }
+            }
+            $value['rise']  = $rise;
+
+            $result[$key]   = $value;
+        }
+
+        if (isset($value['rise']) && 1.99999999 <= $value['rise']) {
+            $count = count($result);
+            for ($i = 0; $i < $count - 9; $i ++) {
+                unset($result[$i]);
+            }
+            $chan->push($result);
         } else {
             $chan->push(false);
         }
     }
-
 }

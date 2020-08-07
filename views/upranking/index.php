@@ -58,16 +58,8 @@ $this->title = 'UpRanking';
 </div>
 
 <style>
-    .el-table .warning-row {
-        background: oldlace;
-    }
-
-    .el-table .success-row {
-        background: #F0E868;
-    }
-
-    .el-table .el-table-column .up-top {
-        background: #EF2929;
+    .el-table .curdate-row {
+        background: #FCFF68;
     }
 </style>
 
@@ -95,7 +87,7 @@ $this->title = 'UpRanking';
                 var _this = this
                 axios.get('https://api.up.ranking.ningle.info/').then(function(response) {
                     if (0 === response.data.code) {
-                        _this.tableData = response.data.list
+                        _this.tableData = response.data.list;
                     }
                 }).catch(function(response) {
                     console.log(response); //发生错误时执行的代码
@@ -113,9 +105,9 @@ $this->title = 'UpRanking';
                 columnIndex
             }) {
                 if ("code" === column.property || "type" === column.property) {
-                    if (rowIndex % 19 === 0) {
+                    if (rowIndex % 9 === 0) {
                         return {
-                            rowspan: 19,
+                            rowspan: 9,
                             colspan: 1
                         };
                     } else {
@@ -136,6 +128,8 @@ $this->title = 'UpRanking';
                     return 'color:red';
                 } else if (row.price === row.dt && "up" == column.property) {
                     return 'color:green';
+                } else if (row.up >= 19.99 && "up" == column.property) {
+                    return 'color:#AF0909';
                 } else {
                     return '';
                 }
@@ -145,7 +139,7 @@ $this->title = 'UpRanking';
                 rowIndex
             }) {
                 if (this.curDate === row.date) {
-                    return 'success-row';
+                    return 'curdate-row';
                 }
                 return '';
             },
