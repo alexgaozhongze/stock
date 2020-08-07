@@ -59,7 +59,7 @@ $this->title = 'UpRanking';
 
 <style>
     .el-table .curdate-row {
-        background: #FCFF68;
+        background: SNOW;
     }
 </style>
 
@@ -124,15 +124,26 @@ $this->title = 'UpRanking';
                 rowIndex,
                 columnIndex
             }) {
-                if (row.price === row.zt && "up" == column.property) {
-                    return 'color:red';
-                } else if (row.price === row.dt && "up" == column.property) {
-                    return 'color:green';
-                } else if (row.up >= 19.99 && "up" == column.property) {
-                    return 'color:#AF0909';
-                } else {
-                    return '';
+                var color = '';
+                switch (column.property) {
+                    case 'up':
+                        if (row.price === row.zt) color = 'RED';
+                        else if (row.price === row.dt) color = 'GREEN';
+                        else if (19.99 <= row.up) color = 'CRIMSON';
+                        break;
+                    case 'zg':
+                        if (row.zg === row.zt) color = 'RED';
+                        break;
+                    case 'zd':
+                        if (row.zd === row.dt) color = 'GREEN';
+                        break;
+                    case 'zf':
+                        if (0 == row.zf) color = 'HOTPINK';
+                        else if (9.99 <= row.zf && 19.99 >= row.zf) color = 'DEEPPINK';
+                        else if (19.99 <= row.zf) color = 'MEDIUMVIOLETRED';
+                        break;
                 }
+                return 'color: ' + color;
             },
             tableRowClassName({
                 row,
