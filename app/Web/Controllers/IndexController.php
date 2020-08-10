@@ -45,4 +45,8 @@ class IndexController
         return ResponseHelper::view($response, 'upranking.index');
     }
 
+    public function uptop(ServerRequest $request, Response $response)
+    {
+        return ResponseHelper::view($response, 'uptop.index');
+    }
 }

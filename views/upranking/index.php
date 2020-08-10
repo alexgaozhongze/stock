@@ -85,7 +85,7 @@ $this->title = 'UpRanking';
         methods: {
             getData() {
                 var _this = this
-                axios.get('https://api.up.ranking.ningle.info/').then(function(response) {
+                axios.get('https://api.up.ranking.ningle.info').then(function(response) {
                     if (0 === response.data.code) {
                         _this.tableData = response.data.list;
                     }
