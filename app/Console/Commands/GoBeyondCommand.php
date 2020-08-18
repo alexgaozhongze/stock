@@ -27,7 +27,7 @@ class GoBeyondCommand
     {
         $this->one();
         $this->two();
-        $this->three();
+        $this->four();
         echo PHP_EOL;
     }
 
