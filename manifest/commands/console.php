@@ -97,4 +97,8 @@ return [
         'description' => "\tTimer demo",
     ],
 
+    'ssq' => [
+        \App\Console\Commands\SsqCommand::class,
+        'description' => "\tshuangseqiu",
+    ],
 ];
