@@ -130,23 +130,25 @@ class GoBeyondCommand
     }
 
     /**
-     * 涨停第二天触及跌停未跌停收盘
+     * 三日连续涨停 涨停时间第一日超50% 后两日合计超75%
      */
     public function six()
     {
+        $dates      = dates(36);
         $codes_info = $this->getCode();
 
         $chan = new Channel();
         foreach ($codes_info as $value) {
             $params = [
-                'code'          => $value['code'],
-                'type'          => $value['type']
+                'code'  => $value['code'],
+                'type'  => $value['type'],
+                'dates' => $dates
             ];
             xgo([$this, 'handleSix'], $chan, $params);
         }
 
         $list = [];
-        foreach ($codes_info as $code) {
+        foreach ($codes_info as $value) {
             $result = $chan->pop();
             $result && $list[] = $result;
         }
@@ -166,23 +168,71 @@ class GoBeyondCommand
     {
         $dbPool = context()->get('dbPool');
         $db     = $dbPool->getConnection();
-        $result = $db->prepare("SELECT `price`,`up`,`zt`,`dt`,`zf`,`zd`,`date` FROM `hsab` WHERE `code`=$params[code] AND `type`=$params[type] AND `price` IS NOT NULL")->queryAll();
+        $sDate  = reset($params['dates']);
+        $result = $db->prepare("SELECT `price`,`up`,`zt`,`zf`,`zs`,`date` FROM `hsab` WHERE `code`=$params[code] AND `type`=$params[type] AND `date`>='$sDate'")->queryAll();
 
-        $hasZt = false;
-        foreach ($result as $value) {
-            if ($value['price'] == $value['zt']) {
-                $hasZt = true;
-            } else if ($hasZt && $value['price'] <> $value['dt'] && $value['zd'] == $value['dt']) {
-                $chan->push([
-                    'code' => $params['code'],
-                    'date' => $value['date']
-                ]);
-                $hasZt = false;
-            } else {
-                $hasZt = false;
+        array_pop($params['dates']);
+        foreach ($params['dates'] as $key => $value) {
+            if (18 >= $key) continue;
+            if ($result[$key]['price'] == $result[$key]['zt'] && $result[$key + 1]['price'] == $result[$key + 1]['zt'] && $result[$key + 2]['price'] == $result[$key + 2]['zt']) {
+                $firstDate  = $value;
+                $firstZt    = $result[$key]['zt'];
+                
+                $firstFscj  = 'fscj_' . date('Ymd', strtotime($firstDate));
+                $firstSql   = "SELECT `price` FROM `$firstFscj` WHERE `code`=$params[code] AND `type`=$params[type]";
+                $firstList  = $db->prepare($firstSql)->queryAll();
+
+                $firstCount = $firstZtCount = 0;
+                foreach ($firstList as $firstValue) {
+                    $firstCount ++;
+                    $firstValue['price'] == $firstZt && $firstZtCount ++;
+                }
+                $firstZtPre = $firstZtCount / $firstCount;
+
+                $secondDate = $result[$key + 1]['date'];
+                $secondZt   = $result[$key + 1]['zt'];
+
+                $secondFscj  = 'fscj_' . date('Ymd', strtotime($secondDate));
+                $secondSql   = "SELECT `price` FROM `$secondFscj` WHERE `code`=$params[code] AND `type`=$params[type]";
+                $secondList  = $db->prepare($secondSql)->queryAll();
+
+                $secondCount = $secondZtCount = 0;
+                foreach ($secondList as $secondValue) {
+                    $secondCount ++;
+                    $secondValue['price'] == $secondZt && $secondZtCount ++;
+                }
+                $secondZtPre = $secondZtCount / $secondCount;
+
+                $thirdDate  = $result[$key + 2]['date'];
+                $thirdZt    = $result[$key + 2]['zt'];
+
+                $thirdFscj  = 'fscj_' . date('Ymd', strtotime($thirdDate));
+                $thirdSql   = "SELECT `price` FROM `$thirdFscj` WHERE `code`=$params[code] AND `type`=$params[type]";
+                $thirdList  = $db->prepare($thirdSql)->queryAll();
+
+                $thirdCount = $thirdZtCount = 0;
+                foreach ($thirdList as $thirdValue) {
+                    $thirdCount ++;
+                    $thirdValue['price'] == $thirdZt && $thirdZtCount ++;
+                }
+                $thirdZtPre = $thirdZtCount / $thirdCount;
+
+                if (0.189 <= $firstZtPre && 0.999 >= $firstZtPre && 1.998 >= $secondZtPre + $thirdZtPre && 1.269 <= $secondZtPre + $thirdZtPre && $result[$key - 1]['price'] != $result[$key - 1]['zt']) {
+                    $price18 = $result[$key - 18]['price'];
+                    !$price18 && $price18 = $result[$key - 18]['zs'];
+                    $rise18 = $firstZt / $price18;
+                    1.269 <= $rise18 && $chan->push([
+                        'code'  => $params['code'],
+                        'date'  => $firstDate,
+                        'fPre'  => $firstZtPre,
+                        'sPre'  => $secondZtPre,
+                        'tPre'  => $thirdZtPre,
+                        'rise'  => $firstZt / $price18
+                    ]);
+                    break;
+                }
             }
         }
-
         $db->release();
     }
 
