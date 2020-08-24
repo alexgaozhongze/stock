@@ -36,7 +36,7 @@ class GoBeyondCommand
      */
     public function three()
     {
-        $dates      = dates(58);
+        $dates      = dates(36);
         $codes_info = $this->getCode();
 
         $chan = new Channel();
@@ -228,11 +228,11 @@ class GoBeyondCommand
                 }
                 $thirdZtPre = $thirdZtCount / $thirdCount;
 
-                if (0.189 <= $firstZtPre && 0.999 >= $firstZtPre && 1.998 >= $secondZtPre + $thirdZtPre && 1.269 <= $secondZtPre + $thirdZtPre && $result[$key - 1]['price'] != $result[$key - 1]['zt']) {
+                if (0.189 <= $firstZtPre && 0.999 >= $firstZtPre && 1.998 >= $secondZtPre + $thirdZtPre && 1.269 <= $secondZtPre + $thirdZtPre) {
                     $price18 = $result[$key - 18]['price'];
                     !$price18 && $price18 = $result[$key - 18]['zs'];
                     $rise18 = $firstZt / $price18;
-                    1.269 <= $rise18 && $chan->push([
+                    1.35 <= $rise18 && $chan->push([
                         'code'  => $params['code'],
                         'date'  => $firstDate,
                         'fPre'  => $firstZtPre,

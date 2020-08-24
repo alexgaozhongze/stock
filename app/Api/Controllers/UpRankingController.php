@@ -97,7 +97,7 @@ class UpRankingController
             $result[$key]   = $value;
         }
 
-        if (isset($value['rise']) && 1.99999999 <= $value['rise']) {
+        if (isset($value['rise']) && 1.23456789 <= $value['rise']) {
             $count = count($result);
             for ($i = 0; $i < $count - 9; $i ++) {
                 unset($result[$i]);
