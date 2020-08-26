@@ -258,7 +258,7 @@ class GoBeyondCommand
 
         // $codes_info = [
         //     [
-        //         'code'  => 600158,
+        //         'code'  => 600823,
         //         'type'  => 1
         //     ]
         // ];
@@ -344,11 +344,11 @@ class GoBeyondCommand
                 }
                 $thirdZtPre = $thirdZtCount / $thirdCount;
 
-                if (0.99 >= $firstZtPre && 1.98 >= $secondZtPre + $thirdZtPre && $result[$key - 1]['price'] != $result[$key - 1]['zt']) {
+                if (1.89 <= $firstZtPre + $secondZtPre + $thirdZtPre && 3 > $firstZtPre + $secondZtPre + $thirdZtPre && $result[$key - 1]['price'] != $result[$key - 1]['zt'] && $result[$key - 2]['price'] != $result[$key - 2]['zt'] && $result[$key - 3]['price'] != $result[$key - 3]['zt']) {
                     $price18 = $result[$key - 18]['price'];
                     !$price18 && $price18 = $result[$key - 18]['zs'];
                     $rise18 = $firstZt / $price18;
-                    1.35 <= $rise18 && $chan->push([
+                    1.26 <= $rise18 && $chan->push([
                         'code'  => $params['code'],
                         'date'  => $firstDate,
                         'fPre'  => $firstZtPre,
