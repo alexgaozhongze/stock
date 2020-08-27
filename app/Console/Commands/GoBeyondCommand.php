@@ -32,9 +32,6 @@ class GoBeyondCommand
             case 36:
                 $this->thirtySix();
                 break;
-            case 39:
-                $this->thirtyNine();
-                break;
             default:
                 echo '3', PHP_EOL;
                 $this->three();
