@@ -19,8 +19,8 @@ class FscjCommand
     public function main()
     {
         xgo(function () {
-            if (time() < strtotime('09:09:09') || time() > strtotime('15:09:03')) return false;
-            if (time() < strtotime('12:57:03') && time() > strtotime('12:03:03 - 27 minutes')) return false;
+            if (time() < strtotime('09:18:09') || time() > strtotime('15:09:03')) return false;
+            if (time() < strtotime('12:57:03') && time() > strtotime('11:31:03')) return false;
             if (!checkOpen()) return false;
             
             $connection = context()->get('dbPool')->getConnection();

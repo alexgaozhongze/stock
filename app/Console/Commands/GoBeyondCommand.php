@@ -19,15 +19,29 @@ class GoBeyondCommand
     public function main()
     {
         $method = Flag::string(['v', 'version'], 'one');
-        if (999 == $method) {
-            echo '3', PHP_EOL;
-            $this->three();
-            echo PHP_EOL, '6', PHP_EOL;
-            $this->six();
-            echo PHP_EOL, '9', PHP_EOL;
-            $this->nine();
-        } else {
-            call_user_func([$this, $method]);
+        switch ($method) {
+            case 3:
+                $this->three();
+                break;
+            case 6:
+                $this->six();
+                break;
+            case 9:
+                $this->nine();
+                break;
+            case 36:
+                $this->thirtySix();
+                break;
+            case 39:
+                $this->thirtyNine();
+                break;
+            default:
+                echo '3', PHP_EOL;
+                $this->three();
+                echo PHP_EOL, '6', PHP_EOL;
+                $this->six();
+                echo PHP_EOL, '9', PHP_EOL;
+                $this->nine();
         }
     }
 
@@ -361,6 +375,157 @@ class GoBeyondCommand
             }
         }
         !$suffice && $chan->push(false);
+        $db->release();
+    }
+
+    /**
+     * 三日连续涨停 涨停时间第一日超50% 后两日合计超75%
+     */
+    public function thirtySix()
+    {
+        $dates      = dates(63);
+        $codes_info = $this->getCode();
+
+        // $codes_info = [
+        //     [
+        //         'code'  => 2108,
+        //         'type'  => 2
+        //     ]
+        // ];
+
+        $chan = new Channel();
+        foreach ($codes_info as $value) {
+            $params = [
+                'code'  => $value['code'],
+                'type'  => $value['type'],
+                'dates' => $dates
+            ];
+            xgo([$this, 'handleThirtySix'], $chan, $params);
+        }
+
+        $list = [];
+        foreach ($codes_info as $value) {
+            $result = $chan->pop();
+            $list = array_merge($list, $result);
+        }
+
+        $sort = array_column($list, 'date');
+        array_multisort($sort, SORT_ASC, $list);
+
+        shellPrint($list);
+    }
+
+    /**
+     * 查询数据
+     * @param Channel $chan
+     * @param array $params
+     */
+    public function handleThirtySix(Channel $chan, $params)
+    {
+        $dbPool = context()->get('dbPool');
+        $db     = $dbPool->getConnection();
+
+        $sDate  = reset($params['dates']);
+        $eDate  = end($params['dates']);
+
+        $sql    = "SELECT `price`,`zg`,`zt`,`zf`,`date` FROM `hsab` WHERE `code`=$params[code] AND `type`=$params[type] AND `date` BETWEEN '$sDate' AND '$eDate'";
+        $result = $db->prepare($sql)->queryAll();
+
+        // $suffice = false;
+        $response = [];
+        foreach ($params['dates'] as $key => $value) {
+            if (isset($result[$key + 2])) {
+                $upStops = [];
+                for ($i = $key; $i <= $key + 2; $i ++) {
+                    if ($result[$i]['zg'] == $result[$i]['zt']) {
+                        $upStops[] = $result[$i];
+                    }
+                }
+
+                if (3 == $countUpStop = count($upStops)) {
+                    $fscjZtPreSum   = 0;
+                    $zfSum          = 0;
+                    foreach ($upStops as $usKey => $usValue) {
+                        $fscj  = 'fscj_' . date('Ymd', strtotime($usValue['date']));
+                        $sql   = "SELECT `price` FROM `$fscj` WHERE `code`=$params[code] AND `type`=$params[type]";
+                        $list  = $db->prepare($sql)->queryAll();
+
+                        $fscjCount      = 0;
+                        $fscjZtCount    = 0;
+                        foreach ($list as $firstValue) {
+                            $fscjCount ++;
+                            $firstValue['price'] == $usValue['zt'] && $fscjZtCount ++;
+                        }
+                        $fscjZtPre  = bcdiv($fscjZtCount, $fscjCount, 3);
+
+                        $fscjZtPreSum   += $fscjZtPre;
+                        $zfSum          += $usValue['zf'];
+
+                        $usValue['ztPre']   = $fscjZtPre;
+                        $upStops[$usKey]    = $usValue;
+                    }
+
+                    // echo $fscjZtPreSum, ' ', $zfSum, ' ', $countUpStop, ' ', end($upStops)['date'], PHP_EOL;
+
+                    $ztPre  = bcdiv($fscjZtPreSum, $countUpStop, 3);
+                    $zfPre  = bcdiv($zfSum, $countUpStop, 3);
+                    if (0.63 <= $ztPre && 9.63 >= $zfPre) {
+                        $dateKey    = array_search(end($upStops)['date'], $params['dates']);
+                        $nextDay    = isset($params['dates'][$dateKey + 1]) ? $params['dates'][$dateKey + 1] : date('Y-m-d');
+
+                        $nextFscj   = 'fscj_' . date('Ymd', strtotime($nextDay));
+                        $sql   = "SELECT `price`,`num`,`up`,`bs` FROM `$nextFscj` WHERE `code`=$params[code] AND `type`=$params[type] AND `time`<='09:36:36'";
+                        $list  = $db->prepare($sql)->queryAll();
+
+                        $sum    = 0;
+                        $sumNum = 0;
+                        $sumCje = 0;
+                        $priceAvg   = 0.00;
+                        $sufficeSum = 0;
+                        $hasFloor   = false;
+                        $hasUpStop  = false;
+                        foreach ($list as $key => $lValue) {
+                            $lValue['up'] < 0 && $hasFloor = true;
+                            $lValue['up'] >= 9.63 && $hasUpStop = true;
+                            if (4 == $lValue['bs']) {
+                                $sum ++;
+                                $sumNum += $lValue['num'];
+                                $cje    = bcmul($lValue['price'], $lValue['num']);
+                                $sumCje += $cje;
+    
+                                $priceAvg = bcdiv($sumCje, $sumNum, 3);
+                                $priceAvg >= $lValue['price'] && $sufficeSum ++;
+                            }
+                        }
+                        // if (9 <= $sum && !$hasFloor && $hasUpStop) {
+                        if ((333333 <= $sumNum || 9 <= $sum) && !$hasFloor && $hasUpStop) {
+                            $response[] = [
+                                'code'  => $params['code'],
+                                'date'  => end($upStops)['date'],
+                                'tPre'  => $ztPre,
+                                'fPre'  => $zfPre,
+                                'fjsm'  => $sum,
+                                'fjds'  => $sufficeSum
+                            ];
+                            //     $chan->push([
+                            //     'code'  => $params['code'],
+                            //     'date'  => end($upStops)['date'],
+                            //     'tPre'  => $ztPre,
+                            //     'fPre'  => $zfPre,
+                            //     'fjsm'  => $sum,
+                            //     'fjds'  => $sufficeSum
+                            // ]);
+                            // $suffice = true;
+                            // break;
+                        }
+                    }
+                }
+            }
+        }
+        // var_dump($response);
+        $response = array_unique($response, SORT_REGULAR);
+        $chan->push($response);
+        // !$suffice && $chan->push(false);
         $db->release();
     }
 
