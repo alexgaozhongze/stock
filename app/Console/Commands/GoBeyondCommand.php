@@ -32,6 +32,9 @@ class GoBeyondCommand
             case 36:
                 $this->thirtySix();
                 break;
+            case 39:
+                $this->thirtyNine();
+                break;
             default:
                 echo '3', PHP_EOL;
                 $this->three();
@@ -380,12 +383,12 @@ class GoBeyondCommand
      */
     public function thirtySix()
     {
-        $dates      = dates(63);
+        $dates      = dates(36);
         $codes_info = $this->getCode();
 
         // $codes_info = [
         //     [
-        //         'code'  => 2108,
+        //         'code'  => 798,
         //         'type'  => 2
         //     ]
         // ];
@@ -428,7 +431,6 @@ class GoBeyondCommand
         $sql    = "SELECT `price`,`zg`,`zt`,`zf`,`date` FROM `hsab` WHERE `code`=$params[code] AND `type`=$params[type] AND `date` BETWEEN '$sDate' AND '$eDate'";
         $result = $db->prepare($sql)->queryAll();
 
-        // $suffice = false;
         $response = [];
         foreach ($params['dates'] as $key => $value) {
             if (isset($result[$key + 2])) {
@@ -504,16 +506,6 @@ class GoBeyondCommand
                                 'fjsm'  => $sum,
                                 'fjds'  => $sufficeSum
                             ];
-                            //     $chan->push([
-                            //     'code'  => $params['code'],
-                            //     'date'  => end($upStops)['date'],
-                            //     'tPre'  => $ztPre,
-                            //     'fPre'  => $zfPre,
-                            //     'fjsm'  => $sum,
-                            //     'fjds'  => $sufficeSum
-                            // ]);
-                            // $suffice = true;
-                            // break;
                         }
                     }
                 }
@@ -522,7 +514,99 @@ class GoBeyondCommand
         // var_dump($response);
         $response = array_unique($response, SORT_REGULAR);
         $chan->push($response);
-        // !$suffice && $chan->push(false);
+        $db->release();
+    }
+
+    /**
+     * macd 成交量超36日均值9.63倍 并且涨停
+     */
+
+    public function thirtyNine()
+    {
+        $dates      = dates(99);
+        $dates[]    = date('Y-m-d');
+        $codes_info = $this->getCode();
+
+        // $codes_info = [
+        //     [
+        //         'code'  => 698,
+        //         'type'  => 2
+        //     ]
+        // ];
+
+        $chan = new Channel();
+        foreach ($codes_info as $value) {
+            $params = [
+                'code'  => $value['code'],
+                'type'  => $value['type'],
+                'dates' => $dates
+            ];
+            xgo([$this, 'handleThirtyNine'], $chan, $params);
+        }
+
+        $list = [];
+        foreach ($codes_info as $value) {
+            $result = $chan->pop();
+            $list = array_merge($list, $result);
+        }
+
+        $sort = array_column($list, 'date');
+        array_multisort($sort, SORT_ASC, $list);
+
+        shellPrint($list);
+    }
+
+    /**
+     * 查询数据
+     * @param Channel $chan
+     * @param array $params
+     */
+    public function handleThirtyNine(Channel $chan, $params)
+    {
+        $dbPool = context()->get('dbPool');
+        $db     = $dbPool->getConnection();
+
+        $sDate  = reset($params['dates']);
+        $kDate  = $params['dates'][36];
+
+        $sql    = "SELECT `price`,`zt`,`date` FROM `hsab` WHERE `code`=$params[code] AND `type`=$params[type] AND `date`>='$sDate'";
+        $hsabs  = $db->prepare($sql)->queryAll();
+
+        $sql    = "SELECT `cjl`,`time` FROM `macd` WHERE `code`=$params[code] AND `type`=$params[type] AND `time`>='$sDate'";
+        $result = $db->prepare($sql)->queryAll();
+
+        $sumCjl = 0;
+        $sumNum = 0;
+        $avgCjl = 0.000;
+        $daySfe = [];
+        foreach ($result as $value) {
+            $sumCjl += $value['cjl'];
+            $sumNum ++;
+            $avgCjl = bcdiv($sumCjl, $sumNum, 3);
+
+            if (strtotime($kDate) < strtotime($value['time'])) {
+                $hasUpStop = false;
+                $date   = substr($value['time'], 0, 10);
+                $dateKey= array_search($date, $params['dates']);
+
+                for ($i = $dateKey - 1; $i > $dateKey - 36; $i --) {
+                    if ($hsabs[$i]['price'] == $hsabs[$i]['zt']) {
+                        $hasUpStop = true;
+                        // echo $hsabs[$i]['date'], PHP_EOL;
+                    }
+                }
+
+                if ($avgCjl * 36.9 <= $value['cjl'] && !$hasUpStop) {
+                    $daySfe[] = [
+                        'code'  => $params['code'],
+                        'date'  => $date,
+                        'time'  => $value['time'],
+                        'pre'   => bcdiv($value['cjl'], $avgCjl, 3)
+                    ];
+                }
+            }
+        }
+        $chan->push($daySfe);
         $db->release();
     }
 
