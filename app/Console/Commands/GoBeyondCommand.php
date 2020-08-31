@@ -29,12 +29,6 @@ class GoBeyondCommand
             case 9:
                 $this->nine();
                 break;
-            case 36:
-                $this->thirtySix();
-                break;
-            case 39:
-                $this->thirtyNine();
-                break;
             default:
                 echo '3', PHP_EOL;
                 $this->three();
@@ -46,7 +40,7 @@ class GoBeyondCommand
     }
 
     /**
-     * 三日连续涨停 涨停时间第一日超50% 后两日合计超75%
+     * 三日连续涨停 第一日涨停时间在0.189-0.999之间 后两日合计涨停时间在1.269-1.998之间
      */
     public function three()
     {
@@ -64,7 +58,7 @@ class GoBeyondCommand
         }
 
         $list = [];
-        foreach ($codes_info as $code) {
+        foreach ($codes_info as $value) {
             $result = $chan->pop();
             $result && $list[] = $result;
         }
@@ -81,114 +75,6 @@ class GoBeyondCommand
      * @param array $params
      */
     public function handleThree(Channel $chan, $params)
-    {
-        $dbPool = context()->get('dbPool');
-        $db     = $dbPool->getConnection();
-        $sDate  = reset($params['dates']);
-        $result = $db->prepare("SELECT `price`,`up`,`zt`,`zf`,`date` FROM `hsab` WHERE `code`=$params[code] AND `type`=$params[type] AND `date`>='$sDate'")->queryAll();
-
-        $suffice = false;
-        array_pop($params['dates']);
-        foreach ($params['dates'] as $key => $value) {
-            if (18 >= $key) continue;
-            if ($result[$key]['price'] == $result[$key]['zt'] && $result[$key + 1]['price'] == $result[$key + 1]['zt'] && $result[$key + 2]['price'] == $result[$key + 2]['zt']) {
-                $firstDate  = $value;
-                $firstZt    = $result[$key]['zt'];
-                
-                $firstFscj  = 'fscj_' . date('Ymd', strtotime($firstDate));
-                $firstSql   = "SELECT `price` FROM `$firstFscj` WHERE `code`=$params[code] AND `type`=$params[type]";
-                $firstList  = $db->prepare($firstSql)->queryAll();
-
-                $firstCount = $firstZtCount = 0;
-                foreach ($firstList as $firstValue) {
-                    $firstCount ++;
-                    $firstValue['price'] == $firstZt && $firstZtCount ++;
-                }
-                $firstZtPre = $firstZtCount / $firstCount;
-
-                $secondDate = $result[$key + 1]['date'];
-                $secondZt   = $result[$key + 1]['zt'];
-
-                $secondFscj  = 'fscj_' . date('Ymd', strtotime($secondDate));
-                $secondSql   = "SELECT `price` FROM `$secondFscj` WHERE `code`=$params[code] AND `type`=$params[type]";
-                $secondList  = $db->prepare($secondSql)->queryAll();
-
-                $secondCount = $secondZtCount = 0;
-                foreach ($secondList as $secondValue) {
-                    $secondCount ++;
-                    $secondValue['price'] == $secondZt && $secondZtCount ++;
-                }
-                $secondZtPre = $secondZtCount / $secondCount;
-
-                $thirdDate  = $result[$key + 2]['date'];
-                $thirdZt    = $result[$key + 2]['zt'];
-
-                $thirdFscj  = 'fscj_' . date('Ymd', strtotime($thirdDate));
-                $thirdSql   = "SELECT `price` FROM `$thirdFscj` WHERE `code`=$params[code] AND `type`=$params[type]";
-                $thirdList  = $db->prepare($thirdSql)->queryAll();
-
-                $thirdCount = $thirdZtCount = 0;
-                foreach ($thirdList as $thirdValue) {
-                    $thirdCount ++;
-                    $thirdValue['price'] == $thirdZt && $thirdZtCount ++;
-                }
-                $thirdZtPre = $thirdZtCount / $thirdCount;
-
-                if (0.5 <= $firstZtPre && 1 > $firstZtPre && 2 > $secondZtPre + $thirdZtPre && 1.5 <= $secondZtPre + $thirdZtPre) {
-                    $price19 = $result[$key - 19]['price'];
-                    $rise19 = $firstZt / $price19;
-                    1.5 <= $rise19 && $chan->push([
-                        'code'  => $params['code'],
-                        'date'  => $firstDate,
-                        'fPre'  => $firstZtPre,
-                        'sPre'  => $secondZtPre,
-                        'tPre'  => $thirdZtPre,
-                        'rise'  => $firstZt / $price19
-                    ]) && $suffice = true;
-                    break;
-                }
-            }
-        }
-        !$suffice && $chan->push(false);
-        $db->release();
-    }
-
-    /**
-     * 三日连续涨停 涨停时间第一日超50% 后两日合计超75%
-     */
-    public function six()
-    {
-        $dates      = dates(36);
-        $codes_info = $this->getCode();
-
-        $chan = new Channel();
-        foreach ($codes_info as $value) {
-            $params = [
-                'code'  => $value['code'],
-                'type'  => $value['type'],
-                'dates' => $dates
-            ];
-            xgo([$this, 'handleSix'], $chan, $params);
-        }
-
-        $list = [];
-        foreach ($codes_info as $value) {
-            $result = $chan->pop();
-            $result && $list[] = $result;
-        }
-
-        $sort = array_column($list, 'date');
-        array_multisort($sort, SORT_ASC, $list);
-
-        shellPrint($list);
-    }
-
-    /**
-     * 查询数据
-     * @param Channel $chan
-     * @param array $params
-     */
-    public function handleSix(Channel $chan, $params)
     {
         $dbPool = context()->get('dbPool');
         $db     = $dbPool->getConnection();
@@ -258,24 +144,18 @@ class GoBeyondCommand
                 }
             }
         }
+        
         !$suffice && $chan->push(false);
         $db->release();
     }
 
     /**
-     * 三日连续涨停 涨停时间第一日超50% 后两日合计超75%
+     * 前三日连续触及涨停 涨停时间均值高于0.63 振幅均值低于9.63 当日竞价成交收高于333333或分时成交高于9且09:36:36之前触及涨停未下跌
      */
-    public function nine()
+    public function six()
     {
         $dates      = dates(36);
         $codes_info = $this->getCode();
-
-        // $codes_info = [
-        //     [
-        //         'code'  => 600823,
-        //         'type'  => 1
-        //     ]
-        // ];
 
         $chan = new Channel();
         foreach ($codes_info as $value) {
@@ -284,123 +164,7 @@ class GoBeyondCommand
                 'type'  => $value['type'],
                 'dates' => $dates
             ];
-            xgo([$this, 'handleNine'], $chan, $params);
-        }
-
-        $list = [];
-        foreach ($codes_info as $value) {
-            $result = $chan->pop();
-            $result && $list[] = $result;
-        }
-
-        $sort = array_column($list, 'date');
-        array_multisort($sort, SORT_ASC, $list);
-
-        shellPrint($list);
-    }
-
-    /**
-     * 查询数据
-     * @param Channel $chan
-     * @param array $params
-     */
-    public function handleNine(Channel $chan, $params)
-    {
-        $dbPool = context()->get('dbPool');
-        $db     = $dbPool->getConnection();
-        $sDate  = reset($params['dates']);
-        $result = $db->prepare("SELECT `price`,`up`,`zt`,`zf`,`zs`,`date` FROM `hsab` WHERE `code`=$params[code] AND `type`=$params[type] AND `date`>='$sDate'")->queryAll();
-
-        $suffice = false;
-        array_pop($params['dates']);
-        foreach ($params['dates'] as $key => $value) {
-            if (18 >= $key) continue;
-            if ($result[$key]['price'] == $result[$key]['zt'] && $result[$key + 1]['price'] == $result[$key + 1]['zt'] && $result[$key + 2]['price'] == $result[$key + 2]['zt']) {
-                $firstDate  = $value;
-                $firstZt    = $result[$key]['zt'];
-                
-                $firstFscj  = 'fscj_' . date('Ymd', strtotime($firstDate));
-                $firstSql   = "SELECT `price` FROM `$firstFscj` WHERE `code`=$params[code] AND `type`=$params[type]";
-                $firstList  = $db->prepare($firstSql)->queryAll();
-
-                $firstCount = $firstZtCount = 0;
-                foreach ($firstList as $firstValue) {
-                    $firstCount ++;
-                    $firstValue['price'] == $firstZt && $firstZtCount ++;
-                }
-                $firstZtPre = $firstZtCount / $firstCount;
-
-                $secondDate = $result[$key + 1]['date'];
-                $secondZt   = $result[$key + 1]['zt'];
-
-                $secondFscj  = 'fscj_' . date('Ymd', strtotime($secondDate));
-                $secondSql   = "SELECT `price` FROM `$secondFscj` WHERE `code`=$params[code] AND `type`=$params[type]";
-                $secondList  = $db->prepare($secondSql)->queryAll();
-
-                $secondCount = $secondZtCount = 0;
-                foreach ($secondList as $secondValue) {
-                    $secondCount ++;
-                    $secondValue['price'] == $secondZt && $secondZtCount ++;
-                }
-                $secondZtPre = $secondZtCount / $secondCount;
-
-                $thirdDate  = $result[$key + 2]['date'];
-                $thirdZt    = $result[$key + 2]['zt'];
-
-                $thirdFscj  = 'fscj_' . date('Ymd', strtotime($thirdDate));
-                $thirdSql   = "SELECT `price` FROM `$thirdFscj` WHERE `code`=$params[code] AND `type`=$params[type]";
-                $thirdList  = $db->prepare($thirdSql)->queryAll();
-
-                $thirdCount = $thirdZtCount = 0;
-                foreach ($thirdList as $thirdValue) {
-                    $thirdCount ++;
-                    $thirdValue['price'] == $thirdZt && $thirdZtCount ++;
-                }
-                $thirdZtPre = $thirdZtCount / $thirdCount;
-
-                if (1.89 <= $firstZtPre + $secondZtPre + $thirdZtPre && 3 > $firstZtPre + $secondZtPre + $thirdZtPre && $result[$key - 1]['price'] != $result[$key - 1]['zt'] && $result[$key - 2]['price'] != $result[$key - 2]['zt'] && $result[$key - 3]['price'] != $result[$key - 3]['zt']) {
-                    $price18 = $result[$key - 18]['price'];
-                    !$price18 && $price18 = $result[$key - 18]['zs'];
-                    $rise18 = $firstZt / $price18;
-                    1.26 <= $rise18 && $chan->push([
-                        'code'  => $params['code'],
-                        'date'  => $firstDate,
-                        'fPre'  => $firstZtPre,
-                        'sPre'  => $secondZtPre,
-                        'tPre'  => $thirdZtPre,
-                        'rise'  => $firstZt / $price18
-                    ]) && $suffice = true;
-                    break;
-                }
-            }
-        }
-        !$suffice && $chan->push(false);
-        $db->release();
-    }
-
-    /**
-     * 三日连续涨停 涨停时间第一日超50% 后两日合计超75%
-     */
-    public function thirtySix()
-    {
-        $dates      = dates(36);
-        $codes_info = $this->getCode();
-
-        // $codes_info = [
-        //     [
-        //         'code'  => 798,
-        //         'type'  => 2
-        //     ]
-        // ];
-
-        $chan = new Channel();
-        foreach ($codes_info as $value) {
-            $params = [
-                'code'  => $value['code'],
-                'type'  => $value['type'],
-                'dates' => $dates
-            ];
-            xgo([$this, 'handleThirtySix'], $chan, $params);
+            xgo([$this, 'handleSix'], $chan, $params);
         }
 
         $list = [];
@@ -420,7 +184,7 @@ class GoBeyondCommand
      * @param Channel $chan
      * @param array $params
      */
-    public function handleThirtySix(Channel $chan, $params)
+    public function handleSix(Channel $chan, $params)
     {
         $dbPool = context()->get('dbPool');
         $db     = $dbPool->getConnection();
@@ -464,8 +228,6 @@ class GoBeyondCommand
                         $upStops[$usKey]    = $usValue;
                     }
 
-                    // echo $fscjZtPreSum, ' ', $zfSum, ' ', $countUpStop, ' ', end($upStops)['date'], PHP_EOL;
-
                     $ztPre  = bcdiv($fscjZtPreSum, $countUpStop, 3);
                     $zfPre  = bcdiv($zfSum, $countUpStop, 3);
                     if (0.63 <= $ztPre && 9.63 >= $zfPre) {
@@ -496,7 +258,6 @@ class GoBeyondCommand
                                 $priceAvg >= $lValue['price'] && $sufficeSum ++;
                             }
                         }
-                        // if (9 <= $sum && !$hasFloor && $hasUpStop) {
                         if ((333333 <= $sumNum || 9 <= $sum) && !$hasFloor && $hasUpStop) {
                             $response[] = [
                                 'code'  => $params['code'],
@@ -511,28 +272,20 @@ class GoBeyondCommand
                 }
             }
         }
-        // var_dump($response);
+
         $response = array_unique($response, SORT_REGULAR);
         $chan->push($response);
         $db->release();
     }
 
     /**
-     * macd 成交量超36日均值9.63倍 并且涨停
+     * 前三日涨幅超1.23 当日13:00:00后涨幅低于均值达6.39 持续时间超3369秒 分时成交超96
      */
 
-    public function thirtyNine()
+    public function nine()
     {
-        $dates      = dates(99);
-        $dates[]    = date('Y-m-d');
+        $dates      = dates(36);
         $codes_info = $this->getCode();
-
-        // $codes_info = [
-        //     [
-        //         'code'  => 698,
-        //         'type'  => 2
-        //     ]
-        // ];
 
         $chan = new Channel();
         foreach ($codes_info as $value) {
@@ -541,13 +294,13 @@ class GoBeyondCommand
                 'type'  => $value['type'],
                 'dates' => $dates
             ];
-            xgo([$this, 'handleThirtyNine'], $chan, $params);
+            xgo([$this, 'handleNine'], $chan, $params);
         }
 
         $list = [];
         foreach ($codes_info as $value) {
             $result = $chan->pop();
-            $list = array_merge($list, $result);
+            $result && $list[] = $result;
         }
 
         $sort = array_column($list, 'date');
@@ -561,52 +314,62 @@ class GoBeyondCommand
      * @param Channel $chan
      * @param array $params
      */
-    public function handleThirtyNine(Channel $chan, $params)
+    public function handleNine(Channel $chan, $params)
     {
         $dbPool = context()->get('dbPool');
         $db     = $dbPool->getConnection();
 
         $sDate  = reset($params['dates']);
-        $kDate  = $params['dates'][36];
 
-        $sql    = "SELECT `price`,`zt`,`date` FROM `hsab` WHERE `code`=$params[code] AND `type`=$params[type] AND `date`>='$sDate'";
-        $hsabs  = $db->prepare($sql)->queryAll();
-
-        $sql    = "SELECT `cjl`,`time` FROM `macd` WHERE `code`=$params[code] AND `type`=$params[type] AND `time`>='$sDate'";
+        $sql    = "SELECT `price`,`date` FROM `hsab` WHERE `code`=$params[code] AND `type`=$params[type] AND `date` >= '$sDate'";
         $result = $db->prepare($sql)->queryAll();
 
-        $sumCjl = 0;
-        $sumNum = 0;
-        $avgCjl = 0.000;
-        $daySfe = [];
-        foreach ($result as $value) {
-            $sumCjl += $value['cjl'];
-            $sumNum ++;
-            $avgCjl = bcdiv($sumCjl, $sumNum, 3);
+        $response = [];
+        $preUpSuffice   = false;
+        foreach ($result as $key => $value) {
+            if (isset($result[$key - 3]) && $result[$key - 3]['price']) {
+                if ($preUpSuffice) {
+                    $fscj  = 'fscj_' . date('Ymd', strtotime($value['date']));
+                    $sql   = "SELECT `up`,`time` FROM `$fscj` WHERE `code`=$params[code] AND `type`=$params[type]";
+                    $list  = $db->prepare($sql)->queryAll();
 
-            if (strtotime($kDate) < strtotime($value['time'])) {
-                $hasUpStop = false;
-                $date   = substr($value['time'], 0, 10);
-                $dateKey= array_search($date, $params['dates']);
+                    $fscjCount  = 0;
+                    $fscjUpSum  = 0;
+                    $fscjUpDif  = 0;
+                    $timeLists  = [];
+                    foreach ($list as $lValue) {
+                        $fscjCount ++;
+                        $fscjUpSum += $lValue['up'];
 
-                for ($i = $dateKey - 1; $i > $dateKey - 36; $i --) {
-                    if ($hsabs[$i]['price'] == $hsabs[$i]['zt']) {
-                        $hasUpStop = true;
-                        // echo $hsabs[$i]['date'], PHP_EOL;
+                        $fscjUpAvg  = bcdiv($fscjUpSum, $fscjCount, 2);
+                        $fscjUpDif  = bcsub($fscjUpAvg, $lValue['up'], 2);
+
+                        6.39 <= $fscjUpDif && $timeLists[] = $lValue['time'];
                     }
+
+                    if ($timeLists && strtotime('13:00:00') <= strtotime(reset($timeLists))) {
+                        $minutesDif = strtotime(end($timeLists)) - strtotime(reset($timeLists));
+                        $minutesCount   = count($timeLists);
+
+                        if (3369 <= $minutesDif && 96 <= $minutesCount) {
+                            $response = [
+                                'code'  => $params['code'],
+                                'date'  => $value['date'],
+                                'sTime' => reset($timeLists),
+                                'eTime' => end($timeLists)
+                            ];
+                        }
+                    }
+
+                    $preUpSuffice = false;
                 }
 
-                if ($avgCjl * 36.9 <= $value['cjl'] && !$hasUpStop) {
-                    $daySfe[] = [
-                        'code'  => $params['code'],
-                        'date'  => $date,
-                        'time'  => $value['time'],
-                        'pre'   => bcdiv($value['cjl'], $avgCjl, 3)
-                    ];
-                }
+                $preUp  = bcdiv($value['price'], $result[$key - 3]['price'], 2);
+                $preUp >= 1.23 && $preUpSuffice = true;
             }
         }
-        $chan->push($daySfe);
+
+        $chan->push($response);
         $db->release();
     }
 
