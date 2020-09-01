@@ -246,7 +246,7 @@ class GoBeyondCommand
                         $hasFloor   = false;
                         $hasUpStop  = false;
                         foreach ($list as $key => $lValue) {
-                            $lValue['up'] < 0 && $hasFloor = true;
+                            $lValue['up'] <= 0 && $hasFloor = true;
                             $lValue['up'] >= 9.63 && $hasUpStop = true;
                             if (4 == $lValue['bs']) {
                                 $sum ++;
