@@ -69,11 +69,11 @@ class HsabCommand
             if (!$datas) return false;
 
             $timer = new Timer();
-            $timer->tick(9988, function () use ($pages) {
+            $timer->tick(9996, function () use ($pages) {
                 self::handle($pages);
             });
 
-            Timer::new()->after(58899, function () use ($timer) {
+            Timer::new()->after(59991, function () use ($timer) {
                 $timer->clear();
             });
         });
