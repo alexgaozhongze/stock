@@ -20,7 +20,9 @@ class MacdCommand
     {
         xgo(function () {
             if (!checkOpen()) return false;
-            
+            if (time() < strtotime('09:15:03') || time() > strtotime('15:30:09')) return false;
+            if (time() < strtotime('12:57:09') && time() > strtotime('11:31:09')) return false;
+
             self::handle();
         });
     }
@@ -29,8 +31,11 @@ class MacdCommand
     {
         $connection = context()->get('dbPool')->getConnection();
 
-        $table_name = 'hq_' . date('Ymd');
-        $sql = "SELECT `code`,`type` FROM `hsab` AS `a` WHERE `date`=CURDATE() AND `price` IS NOT NULL GROUP BY `code`";
+        if (time() < strtotime('15:00:00')) {
+            $sql = "SELECT `code`,`type` FROM `hsab` WHERE `date`=CURDATE() AND `price`=`zt` GROUP BY `code`";
+        } else {
+            $sql = "SELECT `code`,`type` FROM `hsab` WHERE `date`=CURDATE() AND `price` IS NOT NULL GROUP BY `code`";
+        }
         $codes = $connection->prepare($sql)->queryAll();
 
         list($microstamp, $timestamp) = explode(' ', microtime());
@@ -47,7 +52,7 @@ class MacdCommand
             ->withOptions([
                 'timeout' => 3
             ])
-            ->success(function(QueryList $ql, Response $response, $index) use ($table_name) {
+            ->success(function(QueryList $ql, Response $response, $index) {
                 $connection = context()->get('dbPool')->getConnection();
 
                 $response_json = $ql->getHtml();
@@ -56,9 +61,11 @@ class MacdCommand
                 $data = $item['data']['data'] ?? [];
                 $info = $item['data']['info'] ?? [];
 
+                if (!$info) return 1;
+
                 $sql_fields = "INSERT IGNORE INTO `macd` (`code`, `kp`, `sp`, `zg`, `zd`, `cjl`, `cje`, `zf`, `time`, `type`, `dif`, `dea`, `macd`, `ema12`, `ema26` ,`ema5`, `ema10`, `ema20`, `ema60`) VALUES ";
                 $sql_values = "";
-    
+
                 $code = $item['data']['code'];
                 $type = $info['mk'];
 

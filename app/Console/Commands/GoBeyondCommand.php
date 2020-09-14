@@ -29,12 +29,6 @@ class GoBeyondCommand
             case 9:
                 $this->nine();
                 break;
-            case 36:
-                $this->thirtySix();
-                break;
-            case 39:
-                $this->thirtyNine();
-                break;
             default:
                 echo '3', PHP_EOL;
                 $this->three();
@@ -198,7 +192,7 @@ class GoBeyondCommand
         $sDate  = reset($params['dates']);
         $eDate  = end($params['dates']);
 
-        $sql    = "SELECT `price`,`zg`,`zt`,`zf`,`date` FROM `hsab` WHERE `code`=$params[code] AND `type`=$params[type] AND `date` BETWEEN '$sDate' AND '$eDate'";
+        $sql    = "SELECT `price`,`zt`,`zg`,`zf`,`date` FROM `hsab` WHERE `code`=$params[code] AND `type`=$params[type] AND `date` BETWEEN '$sDate' AND '$eDate'";
         $result = $db->prepare($sql)->queryAll();
 
         $response = [];
@@ -285,13 +279,20 @@ class GoBeyondCommand
     }
 
     /**
-     * 前三日涨幅超1.23 当日13:00:00后涨幅低于均值达6.39 持续时间超3369秒 分时成交超96
+     * macd 30日最低后 ema5>ema10>ema20 搞
      */
 
     public function nine()
     {
-        $dates      = dates(36);
+        $dates      = dates(9);
         $codes_info = $this->getCode();
+
+        // $codes_info = [
+        //     [
+        //         'code'  => 2617,
+        //         'type'  => 2
+        //     ]
+        // ];
 
         $chan = new Channel();
         foreach ($codes_info as $value) {
@@ -309,7 +310,7 @@ class GoBeyondCommand
             $result && $list[] = $result;
         }
 
-        $sort = array_column($list, 'date');
+        $sort = array_column($list, 'pre');
         array_multisort($sort, SORT_ASC, $list);
 
         shellPrint($list);
@@ -327,132 +328,22 @@ class GoBeyondCommand
 
         $sDate  = reset($params['dates']);
 
-        $sql    = "SELECT `price`,`date` FROM `hsab` WHERE `code`=$params[code] AND `type`=$params[type] AND `date` >= '$sDate'";
+        $sql    = "SELECT `zt` FROM `hsab` WHERE `code`=$params[code] AND `type`=$params[type] AND `date`=CURDATE()";
+        $sql    = "SELECT `zt` FROM `hsab` WHERE `code`=$params[code] AND `type`=$params[type] AND `date`='2020-09-09'";
         $result = $db->prepare($sql)->queryAll();
 
-        $response = [];
-        $preUpSuffice   = false;
         foreach ($result as $key => $value) {
-            if (isset($result[$key - 3]) && $result[$key - 3]['price']) {
-                if ($preUpSuffice) {
-                    $fscj  = 'fscj_' . date('Ymd', strtotime($value['date']));
-                    $sql   = "SELECT `up`,`time` FROM `$fscj` WHERE `code`=$params[code] AND `type`=$params[type]";
-                    $list  = $db->prepare($sql)->queryAll();
+            $fscj   = 'fscj_' . date('Ymd');
+            $fscj   = 'fscj_20200909';
+            $sql    = "SELECT SUM(`num`) AS `snum` FROM `$fscj` WHERE `code`=$params[code] AND `type`=$params[type] AND `price`=$value[zt]";
+            $info   = $db->prepare($sql)->queryOne();
 
-                    $fscjCount  = 0;
-                    $fscjUpSum  = 0;
-                    $fscjUpDif  = 0;
-                    $timeLists  = [];
-                    foreach ($list as $lValue) {
-                        $fscjCount ++;
-                        $fscjUpSum += $lValue['up'];
-
-                        $fscjUpAvg  = bcdiv($fscjUpSum, $fscjCount, 2);
-                        $fscjUpDif  = bcsub($fscjUpAvg, $lValue['up'], 2);
-
-                        6.39 <= $fscjUpDif && strtotime('13:00:00') <= strtotime($lValue['time']) && $timeLists[] = $lValue['time'];
-                    }
-
-                    if ($timeLists) {
-                        $minutesDif = strtotime(end($timeLists)) - strtotime(reset($timeLists));
-                        $minutesCount   = count($timeLists);
-
-                        if (3369 <= $minutesDif && 96 <= $minutesCount) {
-                            $response = [
-                                'code'  => $params['code'],
-                                'date'  => $value['date'],
-                                'sTime' => reset($timeLists),
-                                'eTime' => end($timeLists)
-                            ];
-                        }
-                    }
-
-                    $preUpSuffice = false;
-                }
-
-                $preUp  = bcdiv($value['price'], $result[$key - 3]['price'], 2);
-                $preUp >= 1.23 && $preUpSuffice = true;
+            if (100000000 <= $info['snum'] * $value['zt'] * 100) {
+                echo $params['code'], PHP_EOL;
             }
+
         }
 
-        $chan->push($response);
-        $db->release();
-    }
-
-    /**
-     * 前九日涨幅超1.23456789 重点关注！！！
-     */
-
-    public function thirtySix()
-    {
-        $dates      = dates(36);
-        $codes_info = $this->getCode();
-
-        $codes_info = [
-            [
-                'code'  => 603757,
-                'type'  => 1
-            ]
-        ];
-
-        $chan = new Channel();
-        foreach ($codes_info as $value) {
-            $params = [
-                'code'  => $value['code'],
-                'type'  => $value['type'],
-                'dates' => $dates
-            ];
-            xgo([$this, 'handleThirtySix'], $chan, $params);
-        }
-
-        $list = [];
-        foreach ($codes_info as $value) {
-            $result = $chan->pop();
-            $result && $list[] = $result;
-        }
-
-        $sort = array_column($list, 'date');
-        array_multisort($sort, SORT_ASC, $list);
-
-        shellPrint($list);
-    }
-
-    /**
-     * 查询数据
-     * @param Channel $chan
-     * @param array $params
-     */
-    public function handleThirtySix(Channel $chan, $params)
-    {
-        $dbPool = context()->get('dbPool');
-        $db     = $dbPool->getConnection();
-
-        $sDate  = reset($params['dates']);
-
-        $sql    = "SELECT `price`,`zg`,`zt`,`zf`,`zs`,`date` FROM `hsab` WHERE `code`=$params[code] AND `type`=$params[type] AND `date` >= '$sDate' AND `price` IS NOT NULL";
-        $result = $db->prepare($sql)->queryAll();
-
-        $response = [];
-        foreach ($result as $key => $value) {
-            if (isset($result[$key - 9]) && $value['zg'] == $value['zt']) {
-                for ($i = 1; $i <= 9; $i ++) {
-                    if ($result[$key - $i]['price'] == $result[$key - $i]['zt']) {
-                        continue 2;
-                    }
-                }
-
-                $rise9 = $value['price'] / $result[$key - 9]['zs'];
-                if (0 <= $rise9 && 1.06 <= $value['zg'] / $value['zs']) {
-                    echo $params['code'], ' ', $value['date'], PHP_EOL;
-                    $response = [
-                        'code'  => $params['code'],
-                        'date'  => $value['date']
-                    ];
-                }
-            }
-        }
-
-        $chan->push($response);
         $db->release();
     }
 
