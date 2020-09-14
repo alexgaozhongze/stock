@@ -2,9 +2,9 @@
 
 namespace App\Console\Commands;
 
-use QL\QueryList;
 use GuzzleHttp\Psr7\Response;
 use Mix\Concurrent\Timer;
+use QL\QueryList;
 
 /**
  * Class HsabCommand

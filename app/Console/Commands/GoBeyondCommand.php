@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use Mix\Console\CommandLine\Flag;
 use Swoole\Coroutine\Channel;
+use Mix\Concurrent\Timer;
 
 /**
  * Class GoBeyondCommand
@@ -301,6 +302,30 @@ class GoBeyondCommand
         array_multisort($sort, SORT_ASC, $list);
 
         shellPrint($list);
+
+        $timer = new Timer();
+        $timer->tick(333333, function () use ($codes_info) {
+            $chan = new Channel();
+            foreach ($codes_info as $value) {
+                xgo([$this, 'handleNine'], $chan, $value);
+            }
+    
+            $list = [];
+            foreach ($codes_info as $value) {
+                $result = $chan->pop();
+                $result && $list[] = $result;
+            }
+    
+            $sort = array_column($list, 'time');
+            array_multisort($sort, SORT_ASC, $list);
+    
+            shellPrint($list);
+            echo PHP_EOL;
+        });
+
+        Timer::new()->after(18333333, function () use ($timer) {
+            $timer->clear();
+        });
     }
 
     /**
