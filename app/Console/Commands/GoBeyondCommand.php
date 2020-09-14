@@ -320,7 +320,6 @@ class GoBeyondCommand
             array_multisort($sort, SORT_ASC, $list);
     
             shellPrint($list);
-            echo PHP_EOL;
         });
 
         Timer::new()->after(18333333, function () use ($timer) {
@@ -346,7 +345,13 @@ class GoBeyondCommand
 
         $curZtCje    = 0;
         foreach ($list as $key => $value) {
-            if ($params['zt'] == $value['price'] && isset($list[$key + 9]) && $params['zt'] == $list[$key + 9]['price']) {
+            if ($params['zt'] == $value['price']) {
+                if (!isset($list[$key + 9])) continue;
+
+                for ($i=1; $i<=9; $i++) {
+                    if ($params['zt'] != $list[$key+$i]['price']) continue 2;
+                }
+
                 $curZtCje = $value['price'] * 100 * $value['num'];
                 
                 $i = 1;

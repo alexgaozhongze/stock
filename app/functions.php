@@ -80,5 +80,5 @@ function shellPrint($datas)
         $len = $maxLens[$value] + 5;
         printf("% -{$len}s", $value);
     }
-    echo PHP_EOL;
+    echo PHP_EOL, PHP_EOL;
 }
