@@ -42,7 +42,7 @@ class GoBeyondCommand
     /**
      * 三日连续涨停 第一日涨停时间在0.189-0.999之间 后两日合计涨停时间在1.269-1.998之间
      */
-    public function three()
+    private function three()
     {
         $dates      = dates(36);
         $codes_info = $this->getCode();
@@ -152,7 +152,7 @@ class GoBeyondCommand
     /**
      * 前三日连续触及涨停 涨停时间均值高于0.63 振幅均值低于9.63 当日竞价成交收高于333333或分时成交高于9且09:36:36之前触及涨停未下跌
      */
-    public function six()
+    private function six()
     {
         $dates      = dates(36);
         $codes_info = $this->getCode();
@@ -279,29 +279,16 @@ class GoBeyondCommand
     }
 
     /**
-     * macd 30日最低后 ema5>ema10>ema20 搞
+     * 涨停且5分钟成交额上亿
      */
 
-    public function nine()
+    private function nine()
     {
-        $dates      = dates(9);
-        $codes_info = $this->getCode();
-
-        // $codes_info = [
-        //     [
-        //         'code'  => 2617,
-        //         'type'  => 2
-        //     ]
-        // ];
+        $codes_info = $this->getCode(" AND `zg`=`zt`");
 
         $chan = new Channel();
         foreach ($codes_info as $value) {
-            $params = [
-                'code'  => $value['code'],
-                'type'  => $value['type'],
-                'dates' => $dates
-            ];
-            xgo([$this, 'handleNine'], $chan, $params);
+            xgo([$this, 'handleNine'], $chan, $value);
         }
 
         $list = [];
@@ -310,7 +297,7 @@ class GoBeyondCommand
             $result && $list[] = $result;
         }
 
-        $sort = array_column($list, 'pre');
+        $sort = array_column($list, 'time');
         array_multisort($sort, SORT_ASC, $list);
 
         shellPrint($list);
@@ -323,35 +310,88 @@ class GoBeyondCommand
      */
     public function handleNine(Channel $chan, $params)
     {
+        $return = [];
+
         $dbPool = context()->get('dbPool');
         $db     = $dbPool->getConnection();
 
-        $sDate  = reset($params['dates']);
+        $fscj   = 'fscj_' . date('Ymd');
+        $sql    = "SELECT `price`,`num`,`time` FROM `$fscj` WHERE `code`=$params[code] AND `type`=$params[type] AND `time`>='09:30:00'";
+        $list   = $db->prepare($sql)->queryAll();
 
-        $sql    = "SELECT `zt` FROM `hsab` WHERE `code`=$params[code] AND `type`=$params[type] AND `date`=CURDATE()";
-        $sql    = "SELECT `zt` FROM `hsab` WHERE `code`=$params[code] AND `type`=$params[type] AND `date`='2020-09-09'";
-        $result = $db->prepare($sql)->queryAll();
+        $curZtCje    = 0;
+        foreach ($list as $key => $value) {
+            if ($params['zt'] == $value['price'] && isset($list[$key + 9]) && $params['zt'] == $list[$key + 9]['price']) {
+                $curZtCje = $value['price'] * 100 * $value['num'];
+                
+                $i = 1;
+                while (isset($list[$key - $i]) && strtotime($value['time']) - strtotime($list[$key - $i]['time']) <= 200) {
+                    $curZtCje += $list[$key - $i]['price'] * 100 * $list[$key - $i]['num'];
+                    $i++;
+                }
 
-        foreach ($result as $key => $value) {
-            $fscj   = 'fscj_' . date('Ymd');
-            $fscj   = 'fscj_20200909';
-            $sql    = "SELECT SUM(`num`) AS `snum` FROM `$fscj` WHERE `code`=$params[code] AND `type`=$params[type] AND `price`=$value[zt]";
-            $info   = $db->prepare($sql)->queryOne();
+                $i = 1;
+                while (isset($list[$key + $i]) && strtotime($list[$key + $i]['time']) - strtotime($value['time']) <= 100) {
+                    $curZtCje += $list[$key + $i]['price'] * 100 * $list[$key + $i]['num'];
+                    $i++;
+                }
 
-            if (100000000 <= $info['snum'] * $value['zt'] * 100) {
-                echo $params['code'], PHP_EOL;
+                break;
+            }
+        }
+        if (100000000 > $curZtCje) goto end;
+        $curZtTime  = $value['time'];
+
+        $sql    = "SELECT `zt`,`date` FROM `hsab` WHERE `code`=$params[code] AND `type`=$params[type] AND `date`=(SELECT MAX(`date`) FROM `hsab` WHERE `date`<>CURDATE()) AND `price`=`zt`";
+        $info   = $db->prepare($sql)->queryOne();
+        if ($info) {
+            $fscj   = 'fscj_' . date('Ymd', strtotime($info['date']));
+            $sql    = "SELECT `price`,`num`,`time` FROM `$fscj` WHERE `code`=$params[code] AND `type`=$params[type] AND `time`>='09:30:00'";
+            $list   = $db->prepare($sql)->queryAll();
+
+            $preZtCje    = 0;
+            foreach ($list as $key => $value) {
+                if ($info['zt'] == $value['price']) {
+                    $preZtCje = $value['price'] * 100 * $value['num'];
+                    
+                    $i = 1;
+                    while (isset($list[$key - $i]) && strtotime($value['time']) - strtotime($list[$key - $i]['time']) <= 150) {
+                        $preZtCje += $list[$key - $i]['price'] * 100 * $list[$key - $i]['num'];
+                        $i++;
+                    }
+
+                    $i = 1;
+                    while (isset($list[$key + $i]) && strtotime($list[$key + $i]['time']) - strtotime($value['time']) <= 150) {
+                        $preZtCje += $list[$key + $i]['price'] * 100 * $list[$key + $i]['num'];
+                        $i++;
+                    }
+
+                    break;
+                }
             }
 
+            if ($preZtCje > $curZtCje) goto end;
         }
 
+        $return = [
+            'code'  => $params['code'],
+            'price' => $params['price'],
+            'up'    => $params['up'],
+            'cje'   => $curZtCje,
+            'time'  => $curZtTime
+        ];
+
+        end:
+        $chan->push($return);
         $db->release();
     }
 
-    private function getCode()
+    private function getCode($and = '')
     {
         $dbPool = context()->get('dbPool');
         $db     = $dbPool->getConnection();
-        $sql    = "SELECT `code`,`type` FROM `hsab` WHERE `date`=CURDATE() AND `price` IS NOT NULL AND LEFT(`name`,1) NOT IN ('*','S') AND LEFT(`code`,3) NOT IN (300,688) AND `code` NOT IN (SELECT `code` FROM `hsab` WHERE `date` >= (SELECT MIN(`date`) FROM (SELECT `date` FROM `hsab` WHERE `date` <> CURDATE() GROUP BY `date` ORDER BY `date` DESC LIMIT 99) AS `t`) AND LEFT(`name`,1)='N' GROUP BY `code`)";
+        $sql    = "SELECT `code`,`price`,`up`,`zt`,`type` FROM `hsab` WHERE `date`=CURDATE() AND `price` IS NOT NULL AND LEFT(`name`,1) NOT IN ('*','S') AND LEFT(`code`,3) NOT IN (300,688) AND `code` NOT IN (SELECT `code` FROM `hsab` WHERE `date` >= (SELECT MIN(`date`) FROM (SELECT `date` FROM `hsab` WHERE `date` <> CURDATE() GROUP BY `date` ORDER BY `date` DESC LIMIT 99) AS `t`) AND LEFT(`name`,1)='N' GROUP BY `code`)";
+        $sql   .= $and;
         $codes_info = $db->prepare($sql)->queryAll();
         $db->release();
 
