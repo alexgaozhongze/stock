@@ -305,6 +305,8 @@ class GoBeyondCommand
 
         $timer = new Timer();
         $timer->tick(333333, function () use ($codes_info) {
+            $codes_info = $this->getCode(" AND `zg`=`zt`");
+
             $chan = new Channel();
             foreach ($codes_info as $value) {
                 xgo([$this, 'handleNine'], $chan, $value);
@@ -407,7 +409,7 @@ class GoBeyondCommand
             'code'  => $params['code'],
             'price' => $params['price'],
             'up'    => $params['up'],
-            'cje'   => $curZtCje,
+            'cje'   => number_format($curZtCje),
             'time'  => $curZtTime
         ];
 
