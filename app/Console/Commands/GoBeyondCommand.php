@@ -31,11 +31,8 @@ class GoBeyondCommand
                 $this->nine();
                 break;
             default:
-                echo '3', PHP_EOL;
                 $this->three();
-                echo PHP_EOL, '6', PHP_EOL;
                 $this->six();
-                echo PHP_EOL, '9', PHP_EOL;
                 $this->nine();
         }
     }
@@ -411,6 +408,7 @@ class GoBeyondCommand
             'code'  => $params['code'],
             'price' => $params['price'],
             'up'    => $params['up'],
+            'cjew'  => number_format($params['cje']),
             'cje'   => number_format($curZtCje),
             'time'  => $curZtTime
         ];
@@ -424,7 +422,7 @@ class GoBeyondCommand
     {
         $dbPool = context()->get('dbPool');
         $db     = $dbPool->getConnection();
-        $sql    = "SELECT `code`,`price`,`up`,`zt`,`type` FROM `hsab` WHERE `date`=CURDATE() AND `price` IS NOT NULL AND LEFT(`name`,1) NOT IN ('*','S') AND LEFT(`code`,3) NOT IN (300,688) AND `code` NOT IN (SELECT `code` FROM `hsab` WHERE `date` >= (SELECT MIN(`date`) FROM (SELECT `date` FROM `hsab` WHERE `date` <> CURDATE() GROUP BY `date` ORDER BY `date` DESC LIMIT 99) AS `t`) AND LEFT(`name`,1)='N' GROUP BY `code`)";
+        $sql    = "SELECT `code`,`price`,`up`,`zt`,`cje`,`type` FROM `hsab` WHERE `date`=CURDATE() AND `price` IS NOT NULL AND LEFT(`name`,1) NOT IN ('*','S') AND LEFT(`code`,3) NOT IN (300,688) AND `code` NOT IN (SELECT `code` FROM `hsab` WHERE `date` >= (SELECT MIN(`date`) FROM (SELECT `date` FROM `hsab` WHERE `date` <> CURDATE() GROUP BY `date` ORDER BY `date` DESC LIMIT 99) AS `t`) AND LEFT(`name`,1)='N' GROUP BY `code`)";
         $sql   .= $and;
         $codes_info = $db->prepare($sql)->queryAll();
         $db->release();

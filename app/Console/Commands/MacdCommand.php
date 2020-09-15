@@ -32,7 +32,7 @@ class MacdCommand
         $connection = context()->get('dbPool')->getConnection();
 
         if (time() < strtotime('15:00:00')) {
-            $sql = "SELECT `code`,`type` FROM `hsab` WHERE `date`=CURDATE() AND `price`=`zt` GROUP BY `code`";
+            $sql = "SELECT `code`,`type` FROM `hsab` WHERE `date`=CURDATE() AND `zg`=`zt` GROUP BY `code`";
         } else {
             $sql = "SELECT `code`,`type` FROM `hsab` WHERE `date`=CURDATE() AND `price` IS NOT NULL GROUP BY `code`";
         }

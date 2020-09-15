@@ -70,15 +70,17 @@ function shellPrint($datas)
     $count = count($datas);
     for ($i=0; $i <= $count; $i++) { 
         foreach ($arrayKeys as $value) {
-            $len = $maxLens[$value] + 5;
-            printf("% -{$len}s", $list[$value][$i]);
+            $len = $maxLens[$value] + 6;
+            // printf("% -{$len}s", $list[$value][$i]);
+            printf("% {$len}s", $list[$value][$i]);
         }
         echo PHP_EOL;
     }
 
     foreach ($arrayKeys as $value) {
-        $len = $maxLens[$value] + 5;
-        printf("% -{$len}s", $value);
+        $len = $maxLens[$value] + 6;
+        printf("% {$len}s", $value);
+        // printf("% -{$len}s", $value);
     }
     echo PHP_EOL, PHP_EOL;
 }
