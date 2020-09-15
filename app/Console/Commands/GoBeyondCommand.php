@@ -304,7 +304,9 @@ class GoBeyondCommand
         shellPrint($list);
 
         $timer = new Timer();
-        $timer->tick(333333, function () use ($codes_info) {
+        $timer->tick(153999, function () use ($codes_info, &$list) {
+            $preList    = $list;
+
             $codes_info = $this->getCode(" AND `zg`=`zt`");
 
             $chan = new Channel();
@@ -321,10 +323,10 @@ class GoBeyondCommand
             $sort = array_column($list, 'time');
             array_multisort($sort, SORT_ASC, $list);
     
-            shellPrint($list);
+            if ($preList != $list) shellPrint($list);
         });
 
-        Timer::new()->after(18333333, function () use ($timer) {
+        Timer::new()->after(18999999, function () use ($timer) {
             $timer->clear();
         });
     }
