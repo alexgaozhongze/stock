@@ -1,18 +1,24 @@
-<html>
-<meta
-http-equiv="Content-Type"
-content="text/html;
-charset=utf-8"/>
-<metahttp-equiv="content-language"content="zh-CN"/>
-<metahttp-equiv="x-ua-compatible"content="ie=7"/>
-<metaname="keywords"content="关键字">
-<metaname="description"content="描述">
+<!DOCTYPE html>
+<html lang="en">
 <head>
-<title>百度百科页面</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
 </head>
 <body>
-<p>body元素的内容会显示在浏览器中。</p>
-<p>title元素的内容会显示在浏览器的标题栏中。</p>
-<iframe src="https://wap.5youfenqi.com/channel/22.html?channel_sign=IkLDGvLDSxd2Xc1sxhMWJB9ANSuh0Ij_" width="2000" height="2000"></iframe>
+  <canvas id="myCanvas" width="999" height="666"></canvas>
+  <script>
+    var c = document.getElementById("myCanvas");
+    var ctx = c.getContext("2d");
+    
+    // Create gradient
+    var grd = ctx.createLinearGradient(100, 20, 200, 10);
+    grd.addColorStop(0, "red");
+    grd.addColorStop(1, "white");
+    
+    // Fill with gradient
+    ctx.fillStyle = grd;
+    ctx.fillRect(100, 10, 150, 80);
+    </script>
 </body>
 </html>

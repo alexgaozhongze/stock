@@ -30,6 +30,9 @@ class GoBeyondCommand
             case 9:
                 $this->nine();
                 break;
+            case 36:
+                $this->thirtySix();
+                break;
             default:
                 $this->three();
                 $this->six();
@@ -375,7 +378,9 @@ class GoBeyondCommand
 
         $sql    = "SELECT `zt`,`date` FROM `hsab` WHERE `code`=$params[code] AND `type`=$params[type] AND `date`=(SELECT MAX(`date`) FROM `hsab` WHERE `date`<>CURDATE()) AND `price`=`zt`";
         $info   = $db->prepare($sql)->queryOne();
+        $cte    = 0;
         if ($info) {
+            $cte    = 1;
             $fscj   = 'fscj_' . date('Ymd', strtotime($info['date']));
             $sql    = "SELECT `price`,`num`,`time` FROM `$fscj` WHERE `code`=$params[code] AND `type`=$params[type] AND `time`>='09:30:00'";
             $list   = $db->prepare($sql)->queryAll();
@@ -386,13 +391,13 @@ class GoBeyondCommand
                     $preZtCje = $value['price'] * 100 * $value['num'];
                     
                     $i = 1;
-                    while (isset($list[$key - $i]) && strtotime($value['time']) - strtotime($list[$key - $i]['time']) <= 150) {
+                    while (isset($list[$key - $i]) && strtotime($value['time']) - strtotime($list[$key - $i]['time']) <= 200) {
                         $preZtCje += $list[$key - $i]['price'] * 100 * $list[$key - $i]['num'];
                         $i++;
                     }
 
                     $i = 1;
-                    while (isset($list[$key + $i]) && strtotime($list[$key + $i]['time']) - strtotime($value['time']) <= 150) {
+                    while (isset($list[$key + $i]) && strtotime($list[$key + $i]['time']) - strtotime($value['time']) <= 100) {
                         $preZtCje += $list[$key + $i]['price'] * 100 * $list[$key + $i]['num'];
                         $i++;
                     }
@@ -401,6 +406,7 @@ class GoBeyondCommand
                 }
             }
 
+            if (100000000 > $preZtCje) goto end;
             if ($preZtCje > $curZtCje) goto end;
         }
 
@@ -408,8 +414,10 @@ class GoBeyondCommand
             'code'  => $params['code'],
             'price' => $params['price'],
             'up'    => $params['up'],
-            'cjew'  => number_format($params['cje']),
-            'cje'   => number_format($curZtCje),
+            'cjs'   => number_format($params['cjs']),
+            'cje'   => number_format($params['cje']),
+            'cjl'   => number_format($curZtCje),
+            'cte'   => $cte,
             'time'  => $curZtTime
         ];
 
@@ -418,11 +426,75 @@ class GoBeyondCommand
         $db->release();
     }
 
+    /**
+     * 涨停且换手率约等于九日均值
+     */
+    private function thirtySix()
+    {
+        $dates      = dates(36);
+        $codes_info = $this->getCode();
+
+        // $codes_info = [
+        //     [
+        //         'code'  => 2759,
+        //         'type'  => 2
+        //     ]
+        // ];
+
+        $chan = new Channel();
+        foreach ($codes_info as $value) {
+            $params = [
+                'code'  => $value['code'],
+                'type'  => $value['type'],
+                'dates' => $dates
+            ];
+            xgo([$this, 'handleThirtySix'], $chan, $params);
+        }
+
+        $list = [];
+        foreach ($codes_info as $value) {
+            $result = $chan->pop();
+            $list = array_merge($list, $result);
+        }
+
+        $sort = array_column($list, 'date');
+        array_multisort($sort, SORT_ASC, $list);
+
+        shellPrint($list);
+    }
+
+    /**
+     * 查询数据
+     * @param Channel $chan
+     * @param array $params
+     */
+    public function handleThirtySix(Channel $chan, $params)
+    {
+        $dbPool = context()->get('dbPool');
+        $db     = $dbPool->getConnection();
+
+        $sDate  = reset($params['dates']);
+
+        $sql    = "SELECT `price`,`zd`,`dt`,`date` FROM `hsab` WHERE `code`=$params[code] AND `type`=$params[type] AND `date`>='$sDate'";
+        $result = $db->prepare($sql)->queryAll();
+
+        $response = [];
+        foreach ($result as $key => $value) {
+            if (0.01 == bcsub($value['zd'], $value['dt'], 2) && strtotime($value['date']) >= strtotime('2020-09-01')) {
+                echo $params['code'], ' ', $value['date'], PHP_EOL;
+            }
+        }
+
+        // $response = array_unique($response, SORT_REGULAR);
+        $chan->push($response);
+        $db->release();
+    }
+
     private function getCode($and = '')
     {
         $dbPool = context()->get('dbPool');
         $db     = $dbPool->getConnection();
-        $sql    = "SELECT `code`,`price`,`up`,`zt`,`cje`,`type` FROM `hsab` WHERE `date`=CURDATE() AND `price` IS NOT NULL AND LEFT(`name`,1) NOT IN ('*','S') AND LEFT(`code`,3) NOT IN (300,688) AND `code` NOT IN (SELECT `code` FROM `hsab` WHERE `date` >= (SELECT MIN(`date`) FROM (SELECT `date` FROM `hsab` WHERE `date` <> CURDATE() GROUP BY `date` ORDER BY `date` DESC LIMIT 99) AS `t`) AND LEFT(`name`,1)='N' GROUP BY `code`)";
+        $sql    = "SELECT `code`,`price`,`up`,`zt`,`cjs`,`cje`,`type` FROM `hsab` WHERE `date`=CURDATE() AND `price` IS NOT NULL AND LEFT(`name`,1) NOT IN ('*','S') AND LEFT(`code`,3) NOT IN (300,688) AND `code` NOT IN (SELECT `code` FROM `hsab` WHERE `date` >= (SELECT MIN(`date`) FROM (SELECT `date` FROM `hsab` WHERE `date` <> CURDATE() GROUP BY `date` ORDER BY `date` DESC LIMIT 99) AS `t`) AND LEFT(`name`,1)='N' GROUP BY `code`)";
         $sql   .= $and;
         $codes_info = $db->prepare($sql)->queryAll();
         $db->release();

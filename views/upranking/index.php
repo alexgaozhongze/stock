@@ -69,7 +69,9 @@ $this->title = 'UpRanking';
         data: {
             tableHeight: 999,
             tableData: [],
-            curDate: ""
+            curDate: "",
+            timer: null,
+            refreshCode: []
         },
         created() {
             this.getCurDate();
@@ -82,21 +84,37 @@ $this->title = 'UpRanking';
                 self.getAutoHeight();
             };
         },
+        destroyed: function() {
+            clearInterval(this.timer);
+            this.timer = null;
+        },
         methods: {
             getData() {
-                var _this = this
-                axios.get('https://api.up.ranking.ningle.info').then(function(response) {
+                let self = this;
+                this.$axios({
+                    method: "get",
+                    url: "https://api.ningle.info/upranking",
+                    data: {},
+                }).then((response) => {
                     if (0 === response.data.code) {
-                        _this.tableData = response.data.list;
+                        self.tableData = response.data.list;
+                        response.data.list.forEach(element => {
+                            if (self.curDate == element.date) {
+                                self.refreshCode.push(element.code);
+                            }
+                        });
+                        // this.timer = setInterval(function () {
+
+                        // }, 9988);
                     }
-                }).catch(function(response) {
-                    console.log(response); //发生错误时执行的代码
                 });
+
+                console.log(this.refreshCode);
             },
             getAutoHeight() {
                 this.$nextTick(() => {
                     this.tableHeight = window.innerHeight - 18.99;
-                })
+                });
             },
             objectSpanMethod({
                 row,
@@ -108,12 +126,12 @@ $this->title = 'UpRanking';
                     if (rowIndex % 9 === 0) {
                         return {
                             rowspan: 9,
-                            colspan: 1
+                            colspan: 1,
                         };
                     } else {
                         return {
                             rowspan: 0,
-                            colspan: 0
+                            colspan: 0,
                         };
                     }
                 }
@@ -124,35 +142,35 @@ $this->title = 'UpRanking';
                 rowIndex,
                 columnIndex
             }) {
-                var color = '';
+                var color = "";
                 switch (column.property) {
-                    case 'up':
-                        if (row.price === row.zt) color = 'RED';
-                        else if (row.price === row.dt) color = 'GREEN';
-                        else if (19.99 <= row.up) color = 'CRIMSON';
+                    case "up":
+                        if (row.price === row.zt) color = "RED";
+                        else if (row.price === row.dt) color = "GREEN";
+                        else if (19.99 <= row.up) color = "CRIMSON";
                         break;
-                    case 'zg':
-                        if (row.zg === row.zt) color = 'RED';
+                    case "zg":
+                        if (row.zg === row.zt) color = "RED";
                         break;
-                    case 'zd':
-                        if (row.zd === row.dt) color = 'GREEN';
+                    case "zd":
+                        if (row.zd === row.dt) color = "GREEN";
                         break;
-                    case 'zf':
-                        if (0 == row.zf) color = 'HOTPINK';
-                        else if (9.99 <= row.zf && 19.99 >= row.zf) color = 'DEEPPINK';
-                        else if (19.99 <= row.zf) color = 'MEDIUMVIOLETRED';
+                    case "zf":
+                        if (0 == row.zf) color = "HOTPINK";
+                        else if (9.99 <= row.zf && 19.99 >= row.zf) color = "DEEPPINK";
+                        else if (19.99 <= row.zf) color = "MEDIUMVIOLETRED";
                         break;
                 }
-                return 'color: ' + color;
+                return "color: " + color;
             },
             tableRowClassName({
                 row,
                 rowIndex
             }) {
                 if (this.curDate === row.date) {
-                    return 'curdate-row';
+                    return "curdate-row";
                 }
-                return '';
+                return "";
             },
             getCurDate() {
                 var now = new Date();
@@ -160,8 +178,8 @@ $this->title = 'UpRanking';
                 var day = now.getDate();
                 if (month < 10) month = "0" + month;
                 if (day < 10) day = "0" + day;
-                this.curDate = now.getFullYear() + '-' + month + '-' + day;
-            }
+                this.curDate = now.getFullYear() + "-" + month + "-" + day;
+            },
         }
     })
 </script>
