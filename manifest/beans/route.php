@@ -15,8 +15,7 @@ return [
             // 默认变量规则
             'defaultPattern' => '[\w-]+',
             // 路由变量规则
-            'patterns'       => [
-            ],
+            'patterns'       => [],
             // 全局中间件
             'middleware'     => [\App\Api\Middleware\GlobalMiddleware::class],
             // 路由规则
@@ -24,7 +23,7 @@ return [
                 // 普通路由
                 'POST /file/upload' => [[\App\Api\Controllers\FileController::class, 'upload'], 'middleware' => [\App\Api\Middleware\ActionMiddleware::class]],
                 '/curl'             => [[\App\Api\Controllers\CurlController::class, 'index'], 'middleware' => [\App\Api\Middleware\ActionMiddleware::class]],
-                '/uptop'            => [[\App\Api\Controllers\UpTopController::class, 'index'], 'middleware' => [\App\Api\Middleware\ActionMiddleware::class]],
+                '/macd/{code}/{type}'   => [[\App\Api\Controllers\MacdController::class, 'index'], 'middleware' => [\App\Api\Middleware\ActionMiddleware::class]],
                 '/upranking'        => [[\App\Api\Controllers\UpRankingController::class, 'index'], 'middleware' => [\App\Api\Middleware\ActionMiddleware::class]],
                 // 分组路由
                 '/v2'               => [
