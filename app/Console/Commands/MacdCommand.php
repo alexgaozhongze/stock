@@ -97,10 +97,10 @@ class MacdCommand
                                 $pre_ema10  = $info['ema10'];
                                 $pre_ema20  = $info['ema20'];
                                 $pre_ema60  = $info['ema60'];
-                                $pre_dea = $info['dea'];
+                                $pre_dea    = $info['dea'];
                             } else {
-                                $pre_ema12 = $pre_ema26 = $pre_ema5 = $pre_ema10 = $pre_ema20 = $pre_ema60 = $sp;
-                                $pre_dea = 0;
+                                $pre_ema12  = $pre_ema26 = $pre_ema5 = $pre_ema10 = $pre_ema20 = $pre_ema60 = $sp;
+                                $pre_dea    = 0;
                             }
                         }
 
