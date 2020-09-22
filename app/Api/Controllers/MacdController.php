@@ -29,22 +29,26 @@ class MacdController
         $code   = $request->getAttribute('code');
         $type   = $request->getAttribute('type');
 
-        $dates  = dates(99);
+        $dates  = dates(36);
         $sDate  = reset($dates);
         
         $dbPool = context()->get('dbPool');
         $db     = $dbPool->getConnection();
-        $sql    = "SELECT `kp`,`sp`,`zg`,`zd`,`time` FROM `macd` WHERE `code`=$code AND `type`=$type AND `time`>='$sDate'";
+        $sql    = "SELECT `kp`,`sp`,`zg`,`zd`,`time`,`ema5`,`ema10`,`ema20`,`ema60` FROM `macd` WHERE `code`=$code AND `type`=$type AND `time`>='$sDate'";
         $list   = $db->prepare($sql)->queryAll();
 
         $content = [];
         foreach ($list as $value) {
             $content[] = [
                 $value['time'],
-                $value['kp'],
-                $value['sp'],
-                $value['zd'],
-                $value['zg']
+                floatval($value['kp']),
+                floatval($value['sp']),
+                floatval($value['zd']),
+                floatval($value['zg']),
+                floatval($value['ema5']),
+                floatval($value['ema10']),
+                floatval($value['ema20']),
+                floatval($value['ema60']),
             ];
         }
 

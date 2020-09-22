@@ -42,21 +42,20 @@
         function calculateMA(dayCount, data) {
             var result = [];
             for (var i = 0, len = data.values.length; i < len; i++) {
-                if (i < dayCount) {
-                    result.push('-');
-                    continue;
+                if (5 == dayCount) {
+                    result.push(data.values[i][4]);
+                } else if (10 == dayCount) {
+                    result.push(data.values[i][5]);
+                } else if (20 == dayCount) {
+                    result.push(data.values[i][6]);
+                } else if (60 == dayCount) {
+                    result.push(data.values[i][7]);
                 }
-                var sum = 0;
-                for (var j = 0; j < dayCount; j++) {
-                    sum += data.values[i - j][1];
-                }
-                result.push(sum / dayCount);
             }
             return result;
         }
 
         $.get('https://api.ningle.info/macd/2759/2', function (rawData) {
-
             var data = splitData(rawData);
 
             myChart.setOption(option = {
@@ -71,7 +70,7 @@
                     }
                 },
                 legend: {
-                    data: ['日K', 'MA5', 'MA10', 'MA20', 'MA30']
+                    data: ['日K', 'MA5', 'MA10', 'MA20', 'MA60']
                 },
                 grid: {
                     left: '10%',
@@ -168,7 +167,7 @@
                                         type: 'min',
                                         valueDim: 'lowest',
                                         symbol: 'circle',
-                                        symbolSize: 10,
+                                        symbolSize: 9,
                                         label: {
                                             show: false
                                         },
@@ -182,7 +181,7 @@
                                         type: 'max',
                                         valueDim: 'highest',
                                         symbol: 'circle',
-                                        symbolSize: 10,
+                                        symbolSize: 9,
                                         label: {
                                             show: false
                                         },
@@ -211,6 +210,7 @@
                         type: 'line',
                         data: calculateMA(5, data),
                         smooth: true,
+                        symbol: "none",
                         lineStyle: {
                             opacity: 0.5
                         }
@@ -220,6 +220,7 @@
                         type: 'line',
                         data: calculateMA(10, data),
                         smooth: true,
+                        symbol: "none",
                         lineStyle: {
                             opacity: 0.5
                         }
@@ -229,20 +230,21 @@
                         type: 'line',
                         data: calculateMA(20, data),
                         smooth: true,
+                        symbol: "none",
                         lineStyle: {
                             opacity: 0.5
                         }
                     },
                     {
-                        name: 'MA30',
+                        name: 'MA60',
                         type: 'line',
-                        data: calculateMA(30, data),
+                        data: calculateMA(60, data),
                         smooth: true,
+                        symbol: "none",
                         lineStyle: {
                             opacity: 0.5
                         }
-                    },
-
+                    }
                 ]
             }, true);
 
