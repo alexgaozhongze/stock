@@ -20,8 +20,8 @@ class MacdCommand
     {
         xgo(function () {
             if (!checkOpen()) return false;
-            if (time() < strtotime('09:15:03') || time() > strtotime('15:51:06')) return false;
-            if (time() < strtotime('12:57:09') && time() > strtotime('11:31:09')) return false;
+            if (time() < strtotime('09:15:03') || time() > strtotime('15:15:15')) return false;
+            if (time() < strtotime('13:00:05') && time() > strtotime('11:33:55')) return false;
 
             self::handle();
         });

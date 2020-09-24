@@ -42,8 +42,8 @@ class HsabCommand
     public function main()
     {
         xgo(function () {
-            if (time() < strtotime('09:15:03') || time() > strtotime('15:03:09')) return false;
-            if (time() < strtotime('12:57:09') && time() > strtotime('11:31:09')) return false;
+            if (time() < strtotime('09:15:03') || time() > strtotime('15:15:15')) return false;
+            if (time() < strtotime('13:00:05') && time() > strtotime('11:33:55')) return false;
 
             list($microstamp, $timestamp) = explode(' ', microtime());
             $timestamp = "$timestamp" . intval($microstamp * 1000);
