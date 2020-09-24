@@ -19,9 +19,9 @@ class FscjCommand
     public function main()
     {
         xgo(function () {
-            if (time() < strtotime('09:18:09') || time() > strtotime('15:09:03')) return false;
-            if (time() < strtotime('12:57:03') && time() > strtotime('11:31:03')) return false;
             if (!checkOpen()) return false;
+            if (time() < strtotime('09:30:06') || time() > strtotime('15:09:03')) return false;
+            if (time() < strtotime('13:00:05') && time() > strtotime('11:33:55')) return false;
             
             $connection = context()->get('dbPool')->getConnection();
             $table_name = "fscj_" . date('Ymd');
