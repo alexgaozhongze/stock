@@ -45,8 +45,6 @@ class MacdCommand
             $sec    = 2 == $item['type'] ? 0 : 1;
             $secid  = $sec . '.' . str_pad($item['code'], 6, "0", STR_PAD_LEFT);
             $urls[] = "http://push2his.eastmoney.com/api/qt/stock/kline/get?fields1=f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f11,f12,f13&fields2=f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61&beg=$date&end=20500101&ut=$ut&rtntype=6&secid=$secid&klt=5&fqt=1&cb=";
-
-            echo "http://push2his.eastmoney.com/api/qt/stock/kline/get?fields1=f1,f2,f3,f4,f5,f6,f7,f8,f9,f10,f11,f12,f13&fields2=f51,f52,f53,f54,f55,f56,f57,f58,f59,f60,f61&beg=$date&end=20500101&ut=$ut&rtntype=6&secid=$secid&klt=5&fqt=1&cb=", PHP_EOL;
         });
 
         QueryList::multiGet($urls)
