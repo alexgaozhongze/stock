@@ -427,24 +427,37 @@ class GoBeyondCommand
     }
 
     /**
-     * 涨停且换手率约等于九日均值
+     * 三日连续涨停
      */
     private function thirtySix()
     {
-        $dates  = dates(9);
-        $sDate  = reset($dates);
-        $codes_info = $this->getCode();
+        $dates      = dates(36);
+        $eDate      = end($dates);
+        $sDate      = reset($dates);
+        $codesInfo  = $this->getCode();
+
+        // $codesInfo  = [
+        //     [
+        //         'code'  => 600976,
+        //         'type'  => 1
+        //     ]
+        // ];
 
         $chan = new Channel();
-        foreach ($codes_info as $value) {
-            $value['sDate'] = $sDate;
-            xgo([$this, 'handleThirtySix'], $chan, $value);
+        foreach ($codesInfo as $value) {
+            $params = [
+                'code'  => $value['code'],
+                'type'  => $value['type'],
+                'sDate' => $sDate,
+                'eDate' => $eDate
+            ];
+            xgo([$this, 'handleThirtySix'], $chan, $params);
         }
 
         $list = [];
-        foreach ($codes_info as $value) {
+        foreach ($codesInfo as $value) {
             $result = $chan->pop();
-            $list   = array_merge($list, $result);
+            $list = array_merge($list, $result);
         }
 
         $sort = array_column($list, 'time');
@@ -460,96 +473,30 @@ class GoBeyondCommand
      */
     public function handleThirtySix(Channel $chan, $params)
     {
-        $return = [];
-
         $dbPool = context()->get('dbPool');
         $db     = $dbPool->getConnection();
 
-        $sql    = "SELECT `price`,`zt`,`cjs`,`cje`,`date` FROM `hsab` WHERE `code`=$params[code] AND `type`=$params[type] AND `date`>='$params[sDate]'";
+        $sql    = "SELECT `zd`,`zf`,`time`,`ema5`,`ema10`,`ema20`,`ema60` FROM `macd` WHERE `code`=$params[code] AND `type`=$params[type] AND `time` BETWEEN '$params[sDate] 09:35:00' AND '$params[eDate] 15:00:00'";
         $list   = $db->prepare($sql)->queryAll();
 
-        foreach ($list as $lValue) {
-            if ($lValue['zt'] != $lValue['price']) continue;
-
-            $fscj   = 'fscj_' . date('Ymd', strtotime($lValue['date']));
-            $sql    = "SELECT `price`,`num`,`time` FROM `$fscj` WHERE `code`=$params[code] AND `type`=$params[type] AND `time`>='09:30:00'";
-            $list   = $db->prepare($sql)->queryAll();
-    
-            $curZtCje    = 0;
-            foreach ($list as $key => $value) {
-                if ($lValue['zt'] == $value['price']) {
-                    if (!isset($list[$key + 9])) continue;
-    
-                    for ($i=1; $i<=9; $i++) {
-                        if ($lValue['zt'] != $list[$key+$i]['price']) continue 2;
-                    }
-    
-                    $curZtCje = $value['price'] * 100 * $value['num'];
-                    
-                    $i = 1;
-                    while (isset($list[$key - $i]) && strtotime($value['time']) - strtotime($list[$key - $i]['time']) <= 200) {
-                        $curZtCje += $list[$key - $i]['price'] * 100 * $list[$key - $i]['num'];
-                        $i++;
-                    }
-    
-                    $i = 1;
-                    while (isset($list[$key + $i]) && strtotime($list[$key + $i]['time']) - strtotime($value['time']) <= 100) {
-                        $curZtCje += $list[$key + $i]['price'] * 100 * $list[$key + $i]['num'];
-                        $i++;
-                    }
-    
-                    break;
+        $response = [];
+        foreach ($list as $key => $value) {
+            if (!strpos($value['time'], '15:00:00')) continue;
+            if ($value['ema5'] > $value['ema20'] && $value['ema10'] > $value['ema20'] && $value['ema20'] > $value['ema60']) {
+                for ($i = 0; $i <= 24; $i ++) {
+                    if ($list[$key - $i]['ema20'] >= $list[$key - $i]['zd'] || 0 == $list[$key - $i]['zf']) continue 2;
                 }
-            }
-            if (100000000 > $curZtCje) continue;
-            $curZtTime  = $value['time'];
-
-            $sql    = "SELECT `zt`,`date` FROM `hsab` WHERE `code`=$params[code] AND `type`=$params[type] AND `date`=(SELECT MAX(`date`) FROM `hsab` WHERE `date`<'$lValue[date]') AND `price`=`zt`";
-            $info   = $db->prepare($sql)->queryOne();
-            $cte    = 0;
-            if ($info) {
-                $cte    = 1;
-                $fscj   = 'fscj_' . date('Ymd', strtotime($info['date']));
-                $sql    = "SELECT `price`,`num`,`time` FROM `$fscj` WHERE `code`=$params[code] AND `type`=$params[type] AND `time`>='09:30:00'";
-                $list   = $db->prepare($sql)->queryAll();
-
-                $preZtCje    = 0;
-                foreach ($list as $key => $value) {
-                    if ($info['zt'] == $value['price']) {
-                        $preZtCje = $value['price'] * 100 * $value['num'];
-                        
-                        $i = 1;
-                        while (isset($list[$key - $i]) && strtotime($value['time']) - strtotime($list[$key - $i]['time']) <= 200) {
-                            $preZtCje += $list[$key - $i]['price'] * 100 * $list[$key - $i]['num'];
-                            $i++;
-                        }
-
-                        $i = 1;
-                        while (isset($list[$key + $i]) && strtotime($list[$key + $i]['time']) - strtotime($value['time']) <= 100) {
-                            $preZtCje += $list[$key + $i]['price'] * 100 * $list[$key + $i]['num'];
-                            $i++;
-                        }
-
-                        break;
-                    }
-                }
-
-                if (100000000 > $preZtCje) continue;
-                if ($preZtCje > $curZtCje) continue;
+            } else {
+                continue;
             }
 
-            $return[] = [
+            $response[] = [
                 'code'  => $params['code'],
-                'price' => $lValue['price'],
-                'cjs'   => number_format($lValue['cjs']),
-                'cje'   => number_format($lValue['cje']),
-                'cjl'   => number_format($curZtCje),
-                'cte'   => $cte,
-                'time'  => $lValue['date'] . ' ' .$curZtTime
+                'time'  => $value['time']
             ];
         }
-
-        $chan->push($return);
+        
+        $chan->push($response);
         $db->release();
     }
 

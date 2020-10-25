@@ -26,9 +26,7 @@ class UpRankingController
 
     public function index(ServerRequest $request, Response $response)
     {
-        // $post = $request->getParsedBody();
-
-        $dates  = dates(19 + 9);
+        $dates  = dates(36);
         $dbPool = context()->get('dbPool');
         $db     = $dbPool->getConnection();
         $sql    = "SELECT `code`,`type` FROM `hsab` WHERE `date`=CURDATE() AND `price` IS NOT NULL AND LEFT(`name`,1) NOT IN ('*','S') AND LEFT(`code`,3) NOT IN (300,688)";
