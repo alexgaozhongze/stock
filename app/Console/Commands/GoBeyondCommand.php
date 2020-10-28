@@ -436,13 +436,6 @@ class GoBeyondCommand
         $sDate      = reset($dates);
         $codesInfo  = $this->getCode();
 
-        // $codesInfo  = [
-        //     [
-        //         'code'  => 600976,
-        //         'type'  => 1
-        //     ]
-        // ];
-
         $chan = new Channel();
         foreach ($codesInfo as $value) {
             $params = [
@@ -460,7 +453,7 @@ class GoBeyondCommand
             $list = array_merge($list, $result);
         }
 
-        $sort = array_column($list, 'time');
+        $sort = array_column($list, 'date');
         array_multisort($sort, SORT_ASC, $list);
 
         shellPrint($list);
@@ -476,23 +469,19 @@ class GoBeyondCommand
         $dbPool = context()->get('dbPool');
         $db     = $dbPool->getConnection();
 
-        $sql    = "SELECT `zd`,`zf`,`time`,`ema5`,`ema10`,`ema20`,`ema60` FROM `macd` WHERE `code`=$params[code] AND `type`=$params[type] AND `time` BETWEEN '$params[sDate] 09:35:00' AND '$params[eDate] 15:00:00'";
+        $sql    = "SELECT `price`,`zt`,`date` FROM `hsab` WHERE `code`=$params[code] AND `type`=$params[type] AND `date` BETWEEN '$params[sDate]' AND '$params[eDate]'";
         $list   = $db->prepare($sql)->queryAll();
 
         $response = [];
         foreach ($list as $key => $value) {
-            if (!strpos($value['time'], '15:00:00')) continue;
-            if ($value['ema5'] > $value['ema20'] && $value['ema10'] > $value['ema20'] && $value['ema20'] > $value['ema60']) {
-                for ($i = 0; $i <= 24; $i ++) {
-                    if ($list[$key - $i]['ema20'] >= $list[$key - $i]['zd'] || 0 == $list[$key - $i]['zf']) continue 2;
-                }
-            } else {
-                continue;
+            if (!isset($list[$key - 2])) continue;
+            for ($i = 0; $i < 3; $i ++) {
+                if ($list[$key - $i]['price'] != $list[$key - $i]['zt']) continue 2;
             }
 
             $response[] = [
                 'code'  => $params['code'],
-                'time'  => $value['time']
+                'date'  => $value['date']
             ];
         }
         
