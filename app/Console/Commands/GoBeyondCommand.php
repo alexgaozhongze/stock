@@ -14,9 +14,6 @@ use Mix\Concurrent\Timer;
 class GoBeyondCommand
 {
 
-    /**
-     * 主函数
-     */
     public function main()
     {
         $method = Flag::string(['v', 'version'], 'one');
@@ -33,6 +30,12 @@ class GoBeyondCommand
             case 36:
                 $this->thirtySix();
                 break;
+            case 39:
+                $this->thirtyNine();
+                break;
+            case 63:
+                $this->sixtyThree();
+                break;
             default:
                 $this->three();
                 $this->six();
@@ -41,27 +44,32 @@ class GoBeyondCommand
     }
 
     /**
-     * 三日连续涨停 第一日涨停时间在0.189-0.999之间 后两日合计涨停时间在1.269-1.998之间
+     * 9days ema20 >= ema60 405times
      */
     private function three()
     {
-        $dates      = dates(36);
-        $codes_info = $this->getCode();
+        $codesInfo  = $this->getCode();
+
+        // $codesInfo  = [
+        //     [
+        //         'code'  => 603993,
+        //         'type'  => 1
+        //     ]
+        // ];
 
         $chan = new Channel();
-        foreach ($codes_info as $value) {
+        foreach ($codesInfo as $value) {
             $params = [
                 'code'  => $value['code'],
                 'type'  => $value['type'],
-                'dates' => $dates
             ];
             xgo([$this, 'handleThree'], $chan, $params);
         }
 
         $list = [];
-        foreach ($codes_info as $value) {
+        foreach ($codesInfo as $value) {
             $result = $chan->pop();
-            $result && $list[] = $result;
+            $list = array_merge($list, $result);
         }
 
         $sort = array_column($list, 'date');
@@ -70,83 +78,41 @@ class GoBeyondCommand
         shellPrint($list);
     }
 
-    /**
-     * 查询数据
-     * @param Channel $chan
-     * @param array $params
-     */
     public function handleThree(Channel $chan, $params)
     {
         $dbPool = context()->get('dbPool');
         $db     = $dbPool->getConnection();
-        $sDate  = reset($params['dates']);
-        $result = $db->prepare("SELECT `price`,`up`,`zt`,`zf`,`zs`,`date` FROM `hsab` WHERE `code`=$params[code] AND `type`=$params[type] AND `date`>='$sDate'")->queryAll();
 
-        $suffice = false;
-        array_pop($params['dates']);
-        foreach ($params['dates'] as $key => $value) {
-            if (18 >= $key) continue;
-            if ($result[$key]['price'] == $result[$key]['zt'] && $result[$key + 1]['price'] == $result[$key + 1]['zt'] && $result[$key + 2]['price'] == $result[$key + 2]['zt']) {
-                $firstDate  = $value;
-                $firstZt    = $result[$key]['zt'];
-                
-                $firstFscj  = 'fscj_' . date('Ymd', strtotime($firstDate));
-                $firstSql   = "SELECT `price` FROM `$firstFscj` WHERE `code`=$params[code] AND `type`=$params[type]";
-                $firstList  = $db->prepare($firstSql)->queryAll();
+        $sql    = "SELECT `ema20`,`ema60`,`time` FROM `macd` WHERE `code`=$params[code] AND `type`=$params[type] ORDER BY `time` DESC LIMIT 999";
+        $result = $db->prepare($sql)->queryAll();
 
-                $firstCount = $firstZtCount = 0;
-                foreach ($firstList as $firstValue) {
-                    $firstCount ++;
-                    $firstValue['price'] == $firstZt && $firstZtCount ++;
-                }
-                $firstZtPre = $firstZtCount / $firstCount;
+        $times  = [];
+        foreach ($result as $key => $value) {
+            if (!isset($result[$key + 432])) continue;
 
-                $secondDate = $result[$key + 1]['date'];
-                $secondZt   = $result[$key + 1]['zt'];
-
-                $secondFscj  = 'fscj_' . date('Ymd', strtotime($secondDate));
-                $secondSql   = "SELECT `price` FROM `$secondFscj` WHERE `code`=$params[code] AND `type`=$params[type]";
-                $secondList  = $db->prepare($secondSql)->queryAll();
-
-                $secondCount = $secondZtCount = 0;
-                foreach ($secondList as $secondValue) {
-                    $secondCount ++;
-                    $secondValue['price'] == $secondZt && $secondZtCount ++;
-                }
-                $secondZtPre = $secondZtCount / $secondCount;
-
-                $thirdDate  = $result[$key + 2]['date'];
-                $thirdZt    = $result[$key + 2]['zt'];
-
-                $thirdFscj  = 'fscj_' . date('Ymd', strtotime($thirdDate));
-                $thirdSql   = "SELECT `price` FROM `$thirdFscj` WHERE `code`=$params[code] AND `type`=$params[type]";
-                $thirdList  = $db->prepare($thirdSql)->queryAll();
-
-                $thirdCount = $thirdZtCount = 0;
-                foreach ($thirdList as $thirdValue) {
-                    $thirdCount ++;
-                    $thirdValue['price'] == $thirdZt && $thirdZtCount ++;
-                }
-                $thirdZtPre = $thirdZtCount / $thirdCount;
-
-                if (0.189 <= $firstZtPre && 0.999 >= $firstZtPre && 1.998 >= $secondZtPre + $thirdZtPre && 1.269 <= $secondZtPre + $thirdZtPre) {
-                    $price18 = $result[$key - 18]['price'];
-                    !$price18 && $price18 = $result[$key - 18]['zs'];
-                    $rise18 = $firstZt / $price18;
-                    1.35 <= $rise18 && $chan->push([
-                        'code'  => $params['code'],
-                        'date'  => $firstDate,
-                        'fPre'  => $firstZtPre,
-                        'sPre'  => $secondZtPre,
-                        'tPre'  => $thirdZtPre,
-                        'rise'  => $firstZt / $price18
-                    ]) && $suffice = true;
-                    break;
-                }
+            $sufficeNums= 0;
+            for ($i = 0; $i <= 432; $i ++) {
+                $result[$key + $i]['ema20'] >= $result[$key + $i]['ema60'] && $sufficeNums ++;
             }
+
+            $sufficeNums >= 405 && $times[] = $value['time'];
         }
-        
-        !$suffice && $chan->push(false);
+
+        $days   = [];
+        foreach ($times as $value) {
+            $day= substr($value, 0, 10);
+            $days[$day] = $day;
+        }
+
+        $response = [];
+        foreach ($days as $value) {
+            $response[] = [
+                'code'  => $params['code'],
+                'date'  => $value
+            ];
+        }
+
+        $chan->push($response);
         $db->release();
     }
 
@@ -489,16 +455,134 @@ class GoBeyondCommand
         $db->release();
     }
 
+    /**
+     * 最低
+     */
+    private function thirtyNine()
+    {
+        $codesInfo  = $this->getCode();
+
+        $chan = new Channel();
+        foreach ($codesInfo as $value) {
+            $params = [
+                'code'  => $value['code'],
+                'type'  => $value['type']
+            ];
+            xgo([$this, 'handleThirtyNine'], $chan, $params);
+        }
+
+        $list = [];
+        foreach ($codesInfo as $value) {
+            $result = $chan->pop();
+            $list[] = $result;
+        }
+
+        $sort = array_column($list, 'days');
+        array_multisort($sort, SORT_ASC, $list);
+
+        shellPrint($list);
+    }
+
+    /**
+     * 查询数据
+     * @param Channel $chan
+     * @param array $params
+     */
+    public function handleThirtyNine(Channel $chan, $params)
+    {
+        $dbPool = context()->get('dbPool');
+        $db     = $dbPool->getConnection();
+
+        $sql    = "SELECT `zd` FROM `hsab` WHERE `code`=$params[code] AND `type`=$params[type] ORDER BY `date` DESC";
+        $list   = $db->prepare($sql)->queryAll();
+
+        $response = [];
+        $curInfo= reset($list);
+        $curZd  = $curInfo['zd'];
+
+        for ($i = 0; $i < count($list); $i ++) {
+            if ($curZd > $list[$i]['zd']) break;
+        }
+
+        $response = [
+            'code'  => $params['code'],
+            'days'  => $i
+        ];
+        
+        $chan->push($response);
+        $db->release();
+    }
+
+    /**
+     * 单日最高涨幅超5%
+     */
+    private function sixtyThree()
+    {
+        $dates      = dates(36);
+        $eDate      = end($dates);
+        $sDate      = reset($dates);
+        $codesInfo  = $this->getCode();
+
+        $chan = new Channel();
+        foreach ($codesInfo as $value) {
+            $params = [
+                'code'  => $value['code'],
+                'type'  => $value['type'],
+                'sDate' => $sDate,
+                'eDate' => $eDate
+            ];
+            xgo([$this, 'handleSixtyThree'], $chan, $params);
+        }
+
+        $list = [];
+        foreach ($codesInfo as $value) {
+            $result = $chan->pop();
+            $list = array_merge($list, $result);
+        }
+
+        $sort = array_column($list, 'date');
+        array_multisort($sort, SORT_ASC, $list);
+
+        shellPrint($list);
+    }
+
+    /**
+     * 查询数据
+     * @param Channel $chan
+     * @param array $params
+     */
+    public function handleSixtyThree(Channel $chan, $params)
+    {
+        $dbPool = context()->get('dbPool');
+        $db     = $dbPool->getConnection();
+
+        $sql    = "SELECT `price`,`zt`,`date` FROM `hsab` WHERE `code`=$params[code] AND `type`=$params[type] AND `date` BETWEEN '$params[sDate]' AND '$params[eDate]' AND `price` IS NOT NULL";
+        $list   = $db->prepare($sql)->queryAll();
+
+        $response = [];
+        foreach ($list as $key => $value) {
+            if ($value['price'] != $value['zt']) continue;
+
+            $response[] = [
+                'code'  => $params['code'],
+                'date'  => $value['date']
+            ];
+        }
+        
+        $chan->push($response);
+        $db->release();
+    }
+
     private function getCode($and = '')
     {
         $dbPool = context()->get('dbPool');
         $db     = $dbPool->getConnection();
-        $sql    = "SELECT `code`,`price`,`up`,`zt`,`cjs`,`cje`,`type` FROM `hsab` WHERE `date`=CURDATE() AND `price` IS NOT NULL AND LEFT(`name`,1) NOT IN ('*','S') AND LEFT(`code`,3) NOT IN (300,688) AND `code` NOT IN (SELECT `code` FROM `hsab` WHERE `date` >= (SELECT MIN(`date`) FROM (SELECT `date` FROM `hsab` WHERE `date` <> CURDATE() GROUP BY `date` ORDER BY `date` DESC LIMIT 99) AS `t`) AND LEFT(`name`,1)='N' GROUP BY `code`)";
-        $sql   .= $and;
-        $codes_info = $db->prepare($sql)->queryAll();
+        $sql    = "SELECT `code`,`price`,`up`,`zt`,`cjs`,`cje`,`type` FROM `hsab` WHERE `date`=(SELECT MAX(`date`) FROM `hsab`) AND `price` IS NOT NULL AND LEFT(`name`,1) NOT IN ('*','S') AND LEFT(`code`,3) NOT IN (300,688) AND `code` NOT IN (SELECT `code` FROM `hsab` WHERE `date` >= (SELECT MIN(`date`) FROM (SELECT `date` FROM `hsab` WHERE `date` <> (SELECT MAX(`date`) FROM `hsab`) GROUP BY `date` ORDER BY `date` DESC LIMIT 99) AS `t`) AND LEFT(`name`,1)='N' GROUP BY `code`)";
+        $sql    .= $and;
+        $codesInfo  = $db->prepare($sql)->queryAll();
         $db->release();
 
-        return $codes_info;
+        return $codesInfo;
     }
 
 }

@@ -113,15 +113,15 @@ class MacdCommand
                     $dea    = 2 / (9 + 1) * $dif + (9 - 1) / (9 + 1) * $pre_dea;
                     $macd   = 2 * ($dif - $dea);
 
-                    $l_value['dif']     = round($dif, 2);
-                    $l_value['dea']     = round($dea, 2);
-                    $l_value['macd']    = round($macd, 2);
-                    $l_value['ema12']   = round($ema12, 2);
-                    $l_value['ema26']   = round($ema26, 2);
-                    $l_value['ema5']    = round($ema5, 2);
-                    $l_value['ema10']   = round($ema10, 2);
-                    $l_value['ema20']   = round($ema20, 2);
-                    $l_value['ema60']   = round($ema60, 2);
+                    $l_value['dif']     = round($dif, 3);
+                    $l_value['dea']     = round($dea, 3);
+                    $l_value['macd']    = round($macd, 3);
+                    $l_value['ema12']   = round($ema12, 3);
+                    $l_value['ema26']   = round($ema26, 3);
+                    $l_value['ema5']    = round($ema5, 3);
+                    $l_value['ema10']   = round($ema10, 3);
+                    $l_value['ema20']   = round($ema20, 3);
+                    $l_value['ema60']   = round($ema60, 3);
 
                     $pre_l_value = $l_value;
 
