@@ -43,7 +43,7 @@ class HsabMacdCommand
     public static function handle(Channel $chan, $params)
     {
         $connection = context()->get('dbPool')->getConnection();
-        $pre_l_value = $connection->prepare("SELECT `dea`,`ema5`,`ema10`,`ema12`,`ema20`,`ema26`,`ema60` FROM `hsab` WHERE `code`=$params[code] AND `type`=$params[type] AND `date`<'$params[date]' ORDER BY `date` DESC")->queryOne();
+        $pre_l_value = $connection->prepare("SELECT `dea`,`ema5`,`ema10`,`ema12`,`ema20`,`ema26`,`ema60` FROM `hsab` WHERE `code`=$params[code] AND `type`=$params[type] AND `date`<'$params[date]' AND `price` IS NOT NULL ORDER BY `date` DESC")->queryOne();
         $cur_l_value = $connection->prepare("SELECT `price` FROM `hsab` WHERE `code`=$params[code] AND `type`=$params[type] AND `date`='$params[date]'")->queryOne();
 
         $sp = $cur_l_value['price'];
