@@ -48,29 +48,17 @@ class HsabCommand
             list($microstamp, $timestamp) = explode(' ', microtime());
             $timestamp = "$timestamp" . intval($microstamp * 1000);
 
-            $ql = QueryList::get("http://nufm.dfcfw.com/EM_Finance2014NumericApplication/JS.aspx?type=ct&st=(ChangePercent)&sr=-1&p=1&ps=1&js={%22pages%22:(pc),%22data%22:[(x)]}&token=894050c76af8597a853f5b408b759f5d&cmd=C._AB&sty=DCFFITA&rt=$timestamp");
-    
-            $json_data = $ql->getHtml();
-            $data = json_decode($json_data, true);
-            $datas = $data['data'] ?? false;
-            $pages = $data['pages'] ?? 0;
-            if (!$datas) return false;
-
-            $info = reset($datas);
-            $date = explode(',', $info)[15];
-            if (date('Y-m-d', strtotime($date)) != date('Y-m-d')) return false;
-
-            $ql = QueryList::get("http://50.push2.eastmoney.com/api/qt/clist/get?pn=1&pz=1&po=1&np=1&ut=bd1d9ddb04089700cf9c27f6f7426281&fltt=2&invt=2&fid=f3&fs=m:0+t:6,m:0+t:13,m:0+t:80,m:1+t:2&fields=f2,f3,f4,f5,f6,f7,f8,f9,f10,f12,f13,f14,f15,f16,f17,f18,f23&_=$timestamp");
+            $ql = QueryList::get("http://$timestamp.push2.eastmoney.com/api/qt/clist/get?pn=1&pz=1&po=1&np=1&ut=bd1d9ddb04089700cf9c27f6f7426281&fltt=2&invt=2&fid=f3&fs=m:0+t:6,m:0+t:13,m:0+t:80,m:1+t:2&fields=f2,f3,f4,f5,f6,f7,f8,f9,f10,f12,f13,f14,f15,f16,f17,f18,f23&_=$timestamp");
         
             $json_data = $ql->getHtml();
             $data = json_decode($json_data, true);
 
-            $pages = $data['data']['total'] ?? 0;
-            if (!$datas) return false;
+            $total = $data['data']['total'] ?? 0;
+            if (!$total) return false;
 
             $timer = new Timer();
-            $timer->tick(9996, function () use ($pages) {
-                self::handle($pages);
+            $timer->tick(9996, function () use ($total) {
+                self::handle($total);
             });
 
             Timer::new()->after(59991, function () use ($timer) {
@@ -79,16 +67,16 @@ class HsabCommand
         });
     }
 
-    public static function handle($pages)
+    public static function handle($total)
     {
         list($microstamp, $timestamp) = explode(' ', microtime());
         $timestamp = "$timestamp" . intval($microstamp * 1000);
 
         $rand = rand(8,9);
         $page_size = $rand * 11;
-        $page_count = ceil($pages / $page_size);
+        $page_count = ceil($total / $page_size);
         for ($i = 1; $i <= $page_count; $i ++) {
-            $urls[] = "http://$page_size.push2.eastmoney.com/api/qt/clist/get?pn=$i&pz=$page_size&po=1&np=1&ut=bd1d9ddb04089700cf9c27f6f7426281&fltt=2&invt=2&fid=f3&fs=m:0+t:6,m:0+t:13,m:0+t:80,m:1+t:2&fields=f2,f3,f4,f5,f6,f7,f8,f9,f10,f12,f13,f14,f15,f16,f17,f18,f23&_=$timestamp";
+            $urls[] = "http://$timestamp.push2.eastmoney.com/api/qt/clist/get?pn=$i&pz=$page_size&po=1&np=1&ut=bd1d9ddb04089700cf9c27f6f7426281&fltt=2&invt=2&fid=f3&fs=m:0+t:6,m:0+t:13,m:0+t:80,m:1+t:2&fields=f2,f3,f4,f5,f6,f7,f8,f9,f10,f12,f13,f14,f15,f16,f17,f18,f23&_=$timestamp";
         }
 
         QueryList::multiGet($urls)
@@ -139,7 +127,6 @@ class HsabCommand
             })->error(function (QueryList $ql, $reason, $index){
                 // ...
             })->send();
-
     }
 
 }

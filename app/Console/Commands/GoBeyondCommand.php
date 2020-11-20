@@ -108,13 +108,6 @@ class GoBeyondCommand
         $dates      = dates(36);
         $codesInfo  = $this->getCode();
 
-        // $codesInfo  = [
-        //     [
-        //         'code'  => 985,
-        //         'type'  => 2
-        //     ]
-        // ];
-
         $chan = new Channel();
         foreach ($codesInfo as $value) {
             $params = [
