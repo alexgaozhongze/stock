@@ -13,8 +13,6 @@
         <template>
             <el-table id="tableData" :data="tableData" stripe highlight-current-row :height="tableHeight" border
                 style="width: 100%" @row-click="macdJump">
-                <el-table-column prop="rise" label="rise">
-                </el-table-column>
                 <el-table-column prop="code" label="code">
                 </el-table-column>
                 <el-table-column prop="name" label="name">
@@ -22,6 +20,12 @@
                 <el-table-column prop="price" label="price">
                 </el-table-column>
                 <el-table-column prop="up" label="up">
+                </el-table-column>
+                <el-table-column prop="p1Up" label="p1Up">
+                </el-table-column>
+                <el-table-column prop="p2Up" label="p2Up">
+                </el-table-column>
+                <el-table-column prop="date" label="date">
                 </el-table-column>
             </el-table>
         </template>

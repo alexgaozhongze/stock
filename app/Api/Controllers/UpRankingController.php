@@ -18,22 +18,22 @@ class UpRankingController
     {
         $dbPool = context()->get('dbPool');
         $db     = $dbPool->getConnection();
-        $sql    = "SELECT `code`,`type`,`price`,`up`,`name`,`ema60` FROM `hsab` WHERE LEFT(`code`,3) NOT IN (300,688) AND `date`=(SELECT MAX(`date`) FROM `hsab`) AND `price` IS NOT NULL AND LEFT(`name`,1) NOT IN ('*','S')";
+        $sql    = "SELECT `code`,`type`,`date` FROM `hsab` WHERE `date`>=(SELECT MIN(`date`) FROM (SELECT `date` FROM `hsab` GROUP BY `date` ORDER BY `date` DESC LIMIT 18) AS `t`) AND LEFT(`code`,3) NOT IN (300,688) AND LEFT(`name`,1)='N' ORDER BY `date` DESC";
         $codes  = $db->prepare($sql)->queryAll();
         $db->release();
 
         foreach ($codes as $key => $value) {
-            $rise   = bcdiv($value['price'], $value['ema60'], 2);
+            $sql    = "SELECT `price`,`up`,`name` FROM `hsab` WHERE `code`=$value[code] AND `type`=$value[type] ORDER BY `date` DESC LIMIT 3";
+            $list   = $db->prepare($sql)->queryAll();
 
-            if (1.23456789 < $rise) {
-                $codes[$key]['rise']    = $rise;
-            } else {
-                unset($codes[$key]);
-            }
+            $value['price'] = $list[0]['price'];
+            $value['up']    = $list[0]['up'];
+            $value['name']  = $list[0]['name'];
+            $value['p1Up']  = isset($list[1]) ? $list[1]['up'] : '';
+            $value['p2Up']  = isset($list[2]) ? $list[2]['up'] : '';
+
+            $codes[$key]    = $value;
         }
-
-        $sort = array_column($codes, 'rise');
-        array_multisort($sort, SORT_DESC, $codes);
 
         $db->release();
 
