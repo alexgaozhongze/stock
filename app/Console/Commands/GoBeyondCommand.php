@@ -42,7 +42,8 @@ class GoBeyondCommand
             $params = [
                 'code'  => $value['code'],
                 'type'  => $value['type'],
-                'sDate' => reset($dates)
+                'sDate' => reset($dates),
+                'eDate' => end($dates)
             ];
             xgo([$this, 'handleThree'], $chan, $params);
         }
@@ -50,12 +51,13 @@ class GoBeyondCommand
         $list = [];
         foreach ($codesInfo as $value) {
             $result = $chan->pop();
-            $list = array_merge($list, $result);
+            $result && $list[] = $result;
         }
 
-        $sort = array_column($list, 'date');
-        array_multisort($sort, SORT_ASC, $list);
+        $sort = array_column($list, 'pre');
+        array_multisort($sort, SORT_DESC, $list);
 
+        $list = array_slice($list, 0, 36);
         shellPrint($list);
     }
 
@@ -64,36 +66,13 @@ class GoBeyondCommand
         $dbPool = context()->get('dbPool');
         $db     = $dbPool->getConnection();
 
-        $sql    = "SELECT `ema20`,`ema60`,`time` FROM `macd` WHERE `code`=$params[code] AND `type`=$params[type] AND `time`>='$params[sDate]'";
+        $sql    = "SELECT `code`,`price`,`type` FROM `hsab` WHERE `code`=$params[code] AND `type`=$params[type] AND `date` IN ('$params[sDate]','$params[eDate]') AND `price` IS NOT NULL";
         $result = $db->prepare($sql)->queryAll();
 
-        $times  = [];
-        foreach ($result as $key => $value) {
-            $gt = true;
-            $value['ema20'] < $value['ema60'] && $gt = false;
-
-            if ($key) {
-                $value['gtc']   = $gt ? $result[$key - 1]['gtc'] + 1 : 0;
-                $value['gtc'] >= 369 && $times[] = $value['time'];
-            } else {
-                $value['gtc']   = $gt ? 1 : 0;
-            }
-
-            $result[$key]   = $value;
-        }
-
-        $days   = [];
-        foreach ($times as $value) {
-            $day= substr($value, 0, 10);
-            $days[$day] = $day;
-        }
-
         $response = [];
-        foreach ($days as $value) {
-            $response[] = [
-                'code'  => $params['code'],
-                'date'  => $value
-            ];
+        if (2 == count($result)) {
+            $response = end($result);
+            $response['pre'] = bcdiv(end($result)['price'], reset($result)['price'], 3);
         }
 
         $chan->push($response);

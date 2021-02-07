@@ -20,8 +20,8 @@ class FscjCommand
     {
         xgo(function () {
             if (!checkOpen()) return false;
-            if (time() < strtotime('09:18:09') || time() > strtotime('15:09:03')) return false;
-            if (time() < strtotime('13:00:05') && time() > strtotime('11:33:55')) return false;
+            if (time() < strtotime('09:09:09') || time() > strtotime('15:15:15')) return false;
+            if (time() < strtotime('12:58:59') && time() > strtotime('11:32:23')) return false;
             
             $connection = context()->get('dbPool')->getConnection();
             $table_name = "fscj_" . date('Ymd');
@@ -56,7 +56,7 @@ class FscjCommand
 
         $urls = [];
         array_walk($code_times, function($item) use (&$urls, $timestamp) {
-            $page_size = 63;
+            $page_size = 144;
             $page = ceil(($item['count'] + 1) / $page_size);
             $page_index = $page - 1;
 

@@ -42,8 +42,8 @@ class HsabCommand
     public function main()
     {
         xgo(function () {
-            if (time() < strtotime('09:15:03') || time() > strtotime('15:15:15')) return false;
-            if (time() < strtotime('13:00:05') && time() > strtotime('11:33:55')) return false;
+            if (time() < strtotime('09:09:09') || time() > strtotime('15:15:15')) return false;
+            if (time() < strtotime('12:58:59') && time() > strtotime('11:32:23')) return false;
 
             list($microstamp, $timestamp) = explode(' ', microtime());
             $timestamp = "$timestamp" . intval($microstamp * 1000);
@@ -56,12 +56,23 @@ class HsabCommand
             $total = $data['data']['total'] ?? 0;
             if (!$total) return false;
 
+            $info = reset($data['data']['diff']);
+            $code = $info['f12'];
+            $type = $info['f13'];
+            $price = $info['f2'];
+            $cjs = $info['f5'];
+
+            $connection = context()->get('dbPool')->getConnection();
+            $sql = "SELECT `price`,`cjs` FROM `hsab` WHERE `code`=$code AND `type`=$type ORDER BY `date` DESC";
+            $existsInfo = $connection->prepare($sql)->queryOne();
+            if ($existsInfo && $price == $existsInfo['price'] && $cjs == $existsInfo['cjs']) return false;
+
             $timer = new Timer();
-            $timer->tick(9996, function () use ($total) {
+            $timer->tick(15999, function () use ($total) {
                 self::handle($total);
             });
 
-            Timer::new()->after(59991, function () use ($timer) {
+            Timer::new()->after(189999, function () use ($timer) {
                 $timer->clear();
             });
         });

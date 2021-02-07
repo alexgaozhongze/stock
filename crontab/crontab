@@ -1,4 +1,4 @@
-*       9-11,13-15      * * 1-5                 /usr/bin/php /data/www/stock/bin/mix.php hsab
-*/18    9-11,13-15      * * 1-5                 /usr/bin/php /data/www/stock/bin/mix.php macd
-*/9     9-11,13-15      * * 1-5                 /usr/bin/php /data/www/stock/bin/mix.php fscj
-*/3     9-11,13-15      * * 1-5                 /usr/bin/php /data/www/stock/bin/mix.php hbmd
+*/3     9-11,13-15      * * 1-5                 /usr/bin/php /data/www/stock/bin/mix.php hsab
+*/6     9-11,13-15      * * 1-5                 /usr/bin/php /data/www/stock/bin/mix.php fscj
+*/9     9-11,13-15      * * 1-5                 /usr/bin/php /data/www/stock/bin/mix.php hbmd
+#*/18   9-11,13-15      * * 1-5                 /usr/bin/php /data/www/stock/bin/mix.php macd
