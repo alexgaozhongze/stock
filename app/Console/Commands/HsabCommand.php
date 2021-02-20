@@ -47,6 +47,12 @@ class HsabCommand
 
             list($microstamp, $timestamp) = explode(' ', microtime());
             $timestamp = "$timestamp" . intval($microstamp * 1000);
+            $date = date('Ymd');
+
+            $ql = QueryList::get("http://push2his.eastmoney.com/api/qt/stock/kline/get?fields1=f1&fields2=f61&beg=$date&end=$date&ut=$timestamp&rtntype=6&secid=1.000001&klt=5&fqt=1&cb=");
+            $json_data = $ql->getHtml();
+            $data = json_decode($json_data, true);
+            if (!$data['data']['klines']) return false;
 
             $ql = QueryList::get("http://$timestamp.push2.eastmoney.com/api/qt/clist/get?pn=1&pz=1&po=1&np=1&ut=bd1d9ddb04089700cf9c27f6f7426281&fltt=2&invt=2&fid=f3&fs=m:0+t:6,m:0+t:13,m:0+t:80,m:1+t:2&fields=f2,f3,f4,f5,f6,f7,f8,f9,f10,f12,f13,f14,f15,f16,f17,f18,f23&_=$timestamp");
         

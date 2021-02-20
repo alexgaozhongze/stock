@@ -25,8 +25,69 @@ class GoBeyondCommand
                 break;
             case 9:
                 $this->nine();
+            case 666:
+                $this->SixSixSix();
                 break;
         }
+    }
+
+    private function SixSixSix()
+    {
+        $dates      = dates(9);
+        $codesInfo  = $this->getCode();
+
+        $chan = new Channel();
+        foreach ($codesInfo as $value) {
+            $params = [
+                'code'  => $value['code'],
+                'type'  => $value['type'],
+                'price' => $value['price'],
+                'sDate' => reset($dates),
+                'eDate' => end($dates)
+            ];
+            xgo([$this, 'handleSixSixSix'], $chan, $params);
+        }
+
+        $list = [];
+        foreach ($codesInfo as $value) {
+            $result = $chan->pop();
+            $result && $list[] = $result;
+        }
+
+        $sort = array_column($list, 'pre');
+        array_multisort($sort, SORT_DESC, $list);
+
+        $list = array_slice($list, 0, 9);
+        shellPrint($list);
+    }
+
+    public function handleSixSixSix(Channel $chan, $params)
+    {
+        $dbPool = context()->get('dbPool');
+        $db     = $dbPool->getConnection();
+
+        $sql    = "SELECT `price`,`zt`,`jk`,`zd` FROM `hsab` WHERE `code`=$params[code] AND `type`=$params[type] AND `date`>='$params[sDate]' AND `price` IS NOT NULL";
+        $result = $db->prepare($sql)->queryAll();
+
+        $first  = reset($result);
+        $match  = false;
+        foreach ($result as $value) {
+            $value['price'] == $value['zt'] && $value['jk'] * 0.001 <= $value['zd'] && $match = true;
+        }
+
+        $response = [
+            'code'  => $params['code'],
+            'type'  => $params['type'],
+            'price' => $params['price'],
+            'pre'   => bcdiv($params['price'], $first['price'], 3)
+        ];
+
+        if ($match) {
+            $chan->push($response);
+        } else {
+            $chan->push([]);
+        }
+        $db->release();
     }
 
     /**
@@ -204,17 +265,15 @@ class GoBeyondCommand
         $db->release();
     }
 
-    private function getCode($and = '')
+    private function getCode()
     {
         $dbPool = context()->get('dbPool');
         $db     = $dbPool->getConnection();
-        $sql    = "SELECT `code`,`price`,`up`,`zt`,`cjs`,`cje`,`type` FROM `hsab` WHERE `date`=(SELECT MAX(`date`) FROM `hsab`) AND `price` IS NOT NULL AND LEFT(`name`,1) NOT IN ('*','S') AND LEFT(`code`,3) NOT IN (300,688) AND `code` NOT IN (SELECT `code` FROM `hsab` WHERE `date` >= (SELECT MIN(`date`) FROM (SELECT `date` FROM `hsab` WHERE `date` <> (SELECT MAX(`date`) FROM `hsab`) GROUP BY `date` ORDER BY `date` DESC LIMIT 99) AS `t`) AND LEFT(`name`,1)='N' GROUP BY `code`)";
-        $sql    = "SELECT `code`,`price`,`up`,`zt`,`cjs`,`cje`,`type` FROM `hsab` WHERE `date`=(SELECT MAX(`date`) FROM `hsab`) AND `price` IS NOT NULL AND LEFT(`name`,1) NOT IN ('*','S') AND LEFT(`code`,3) NOT IN (300,688) AND `code` NOT IN (SELECT `code` FROM `hsab` WHERE `date` >= (SELECT MIN(`date`) FROM (SELECT `date` FROM `hsab` WHERE `date` <> (SELECT MAX(`date`) FROM `hsab`) GROUP BY `date` ORDER BY `date` DESC LIMIT 99) AS `t`) AND LEFT(`name`,1)='N' GROUP BY `code`)";
-        $sql    .= $and;
+        $sql    = "SELECT `code`,`price`,`up`,`zt`,`type` FROM `hsab` WHERE `date`=(SELECT MAX(`date`) FROM `hsab`) AND `price` IS NOT NULL AND LEFT(`name`,1) NOT IN ('*','S') AND LEFT(`code`,3) NOT IN (300,688)";
         $codesInfo  = $db->prepare($sql)->queryAll();
         $db->release();
 
         return $codesInfo;
     }
 
-}
+} 
