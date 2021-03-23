@@ -21,10 +21,11 @@ return [
             // 路由规则
             'rules'          => [
                 // 普通路由
-                'POST /file/upload' => [[\App\Api\Controllers\FileController::class, 'upload'], 'middleware' => [\App\Api\Middleware\ActionMiddleware::class]],
-                '/curl'             => [[\App\Api\Controllers\CurlController::class, 'index'], 'middleware' => [\App\Api\Middleware\ActionMiddleware::class]],
-                '/macd/{code}/{type}'   => [[\App\Api\Controllers\MacdController::class, 'index'], 'middleware' => [\App\Api\Middleware\ActionMiddleware::class]],
-                '/upranking'        => [[\App\Api\Controllers\UpRankingController::class, 'index'], 'middleware' => [\App\Api\Middleware\ActionMiddleware::class]],
+                'POST /file/upload'     => [[\App\Api\Controllers\FileController::class, 'upload'],     'middleware' => [\App\Api\Middleware\ActionMiddleware::class]],
+                '/curl'                 => [[\App\Api\Controllers\CurlController::class, 'index'],      'middleware' => [\App\Api\Middleware\ActionMiddleware::class]],
+                '/macd/{code}/{type}'   => [[\App\Api\Controllers\MacdController::class, 'index'],      'middleware' => [\App\Api\Middleware\ActionMiddleware::class]],
+                '/upranking'            => [[\App\Api\Controllers\UpRankingController::class, 'index'], 'middleware' => [\App\Api\Middleware\ActionMiddleware::class]],
+                '/gobeyond'             => [[\App\Api\Controllers\GoBeyondController::class, 'index'],  'middleware' => [\App\Api\Middleware\ActionMiddleware::class]],
                 // 分组路由
                 '/v2'               => [
                     // 分组中间件
@@ -65,6 +66,7 @@ return [
                 '/login'        => [[\App\Web\Controllers\IndexController::class, 'login'],     'middleware' => [\App\Web\Middleware\ActionMiddleware::class]],
                 '/uptop'        => [[\App\Web\Controllers\IndexController::class, 'uptop'],     'middleware' => [\App\Web\Middleware\ActionMiddleware::class]],
                 '/upranking'    => [[\App\Web\Controllers\IndexController::class, 'upranking'], 'middleware' => [\App\Web\Middleware\ActionMiddleware::class]],
+                '/gobeyond'     => [[\App\Web\Controllers\GoBeyondController::class, 'gobeyond'],'middleware'=> [\App\Web\Middleware\ActionMiddleware::class]],
                 '/profile/{id}' => [[\App\Web\Controllers\ProfileController::class, 'index'],   'middleware' => [\App\Web\Middleware\ActionMiddleware::class]],
                 '/ws'           => [[\App\Web\Controllers\WebSocketController::class, 'index'], 'middleware' => [\App\Web\Middleware\ActionMiddleware::class]],
             ],

@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="zh-cn">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GoBeyond</title>
+    <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+</head>
+
+<body>
+    <div id="app">
+        <template>
+            <el-table id="tableData" :data="tableData" stripe highlight-current-row :height="tableHeight" border
+                style="width: 100%" @row-click="macdJump">
+                <el-table-column prop="code" label="code">
+                </el-table-column>
+                <el-table-column prop="hslpre" label="hslpre">
+                </el-table-column>
+                <el-table-column prop="name" label="name">
+                </el-table-column>
+                <el-table-column prop="price" label="price">
+                </el-table-column>
+                <el-table-column prop="up" label="up">
+                </el-table-column>
+            </el-table>
+        </template>
+    </div>
+
+    <script src="https://unpkg.com/vue/dist/vue.js"></script>
+    <script src="https://unpkg.com/element-ui/lib/index.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+
+    <script>
+        new Vue({
+            el: '#app',
+            data: {
+                tableHeight: 999,
+                tableData: [],
+                timer: null,
+            },
+            created() {
+                this.getData();
+                this.timer = setInterval(() => {
+                    this.getData();
+                }, 60000)
+            },
+            mounted() {
+                this.getAutoHeight();
+                const self = this;
+                window.onresize = function () {
+                    self.getAutoHeight();
+                };
+            },
+            destroyed: function () {
+                clearInterval(this.timer);
+                this.timer = null;
+            },
+            methods: {
+                getData() {
+                    let self = this;
+                    axios({
+                        method: "get",
+                        url: "https://api.ningle.info/gobeyond",
+                        data: {},
+                    }).then((response) => {
+                        if (0 === response.data.code) {
+                            self.tableData = response.data.list;
+                        }
+                    });
+                },
+                getAutoHeight() {
+                    this.$nextTick(() => {
+                        this.tableHeight = window.innerHeight - 18.99;
+                    });
+                },
+                macdJump(row) {
+                    window.open("https://quote.eastmoney.com/basic/h5chart-iframe.html?code=" + row['code'].toString().padStart(6, '0') + "&market=" + row['type'] + "&type=r");
+                }
+            }
+        })
+    </script>
+</body>
+
+</html>

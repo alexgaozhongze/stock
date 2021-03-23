@@ -1,0 +1,1 @@
+SELECT * FROM hsab where code in (SELECT code FROM hsab WHERE date=(select max(date) from hsab where date<>CURDATE()) AND price =zt and jk=zd and zf>=6) and date=CURDATE() and LEFT(name, 1) not in ("S") ORDER BY hsl
